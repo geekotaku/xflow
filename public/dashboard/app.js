@@ -492,6 +492,18 @@ async function loadRecords(page = 1) {
     tbody.appendChild(tr);
   }
 
+  // Pad empty placeholder rows so table height stays constant across pages (avoids pagination button jumping)
+  const emptyCount = PAGE_SIZE - (data.records?.length || 0);
+  if (emptyCount > 0 && data.pages > 1) {
+    for (let i = 0; i < emptyCount; i++) {
+      const tr = document.createElement('tr');
+      tr.className = 'empty-row';
+      tr.setAttribute('aria-hidden', 'true');
+      tr.innerHTML = '<td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>';
+      tbody.appendChild(tr);
+    }
+  }
+
   // Update pagination controls
   const pageInfo = document.getElementById('pageInfo');
   const prevBtn  = document.getElementById('prevBtn');

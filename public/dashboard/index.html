@@ -327,6 +327,15 @@
   tbody tr:hover td { background: var(--surface-2); }
   tbody tr.user-divider td { border-top: 2px solid var(--border); }
   td.user-cell { font-weight: 600; color: var(--text); }
+  tbody tr.empty-row td {
+    border-bottom: 1px solid transparent;
+    color: transparent;
+    user-select: none;
+    pointer-events: none;
+  }
+  tbody tr.empty-row:hover td {
+    background: transparent !important;
+  }
 
   /* Pagination */
   .pagination-bar {
