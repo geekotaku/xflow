@@ -1,0 +1,35 @@
+{
+  "name": "xflow-agent",
+  "version": "1.0.0",
+  "description": "Reads Xray-core per-user traffic stats over gRPC and reports deltas to an xflow-collector aggregator, for feeding self-built nodes' usage into Sub-Store.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/geekotaku/xflow.git",
+    "directory": "agent"
+  },
+  "homepage": "https://github.com/geekotaku/xflow/tree/main/agent#readme",
+  "main": "dist/index.js",
+  "bin": {
+    "xflow-agent": "dist/index.js"
+  },
+  "scripts": {
+    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
+    "prebuild": "npm run clean",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.0",
+    "@grpc/proto-loader": "^0.8.0",
+    "commander": "^15.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^ 26.5.0",
+    "tsx": "^4.23.0",
+    "typescript": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "xflow",
+  "version": "1.0.0",
+  "description": "Aggregates traffic deltas pushed by xflow-agent, stores them in SQLite, and serves a dashboard, a node/token admin page, and a Sub-Store-compatible flow endpoint.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/geekotaku/xflow.git"
+  },
+  "homepage": "https://github.com/geekotaku/xflow#readme",
+  "main": "dist/index.js",
+  "scripts": {
+    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
+    "prebuild": "npm run clean",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.0",
+    "chart.js": "^4.5.0",
+    "express": "^5.2.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.20.0",
+    "tsx": "^4.23.0",
+    "typescript": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

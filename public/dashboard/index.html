@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>xflow · Traffic Stats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+  /* ── Design tokens ─────────────────────────────────────────── */
+  :root {
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --radius: 8px;
+    --radius-sm: 6px;
+
+    /* Light theme */
+    --bg: #f5f6fa;
+    --surface: #ffffff;
+    --surface-2: #f0f1f5;
+    --border: #e2e4eb;
+    --text: #1a1d2e;
+    --text-muted: #6b7080;
+    --accent: #5b7cf6;
+    --accent-hover: #4568e8;
+    --shadow: 0 2px 12px rgba(0,0,0,.08);
+    --select-bg: #ffffff;
+    --select-border: #d0d4df;
+    --input-bg: #ffffff;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f1117;
+    --surface: #1a1d2e;
+    --surface-2: #242736;
+    --border: #2e3148;
+    --text: #e8eaf6;
+    --text-muted: #8b90a8;
+    --accent: #6b8bff;
+    --accent-hover: #8ca4ff;
+    --shadow: 0 2px 20px rgba(0,0,0,.4);
+    --select-bg: #242736;
+    --select-border: #3a3f5c;
+    --input-bg: #242736;
+  }
+
+  /* Auto = follow OS preference */
+  @media (prefers-color-scheme: dark) {
+    [data-theme="auto"] {
+      --bg: #0f1117;
+      --surface: #1a1d2e;
+      --surface-2: #242736;
+      --border: #2e3148;
+      --text: #e8eaf6;
+      --text-muted: #8b90a8;
+      --accent: #6b8bff;
+      --accent-hover: #8ca4ff;
+      --shadow: 0 2px 20px rgba(0,0,0,.4);
+      --select-bg: #242736;
+      --select-border: #3a3f5c;
+      --input-bg: #242736;
+    }
+  }
+
+  /* ── Base ───────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    transition: background .25s, color .25s;
+  }
+
+  .page-wrap {
+    max-width: 1060px;
+    margin-inline: auto;
+    padding: 28px 24px 48px;
+  }
+
+  /* ── Header ─────────────────────────────────────────────────── */
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .header-left h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    letter-spacing: -.3px;
+  }
+
+  .header-left .sub {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin: 0;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  /* ── Dropdown icon buttons ──────────────────────────────────── */
+  .icon-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: background .18s, color .18s;
+    white-space: nowrap;
+  }
+
+  .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+
+  .icon-btn .chevron {
+    width: 10px;
+    height: 10px;
+    opacity: .5;
+    transition: transform .2s;
+  }
+
+  .icon-btn[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+  /* Dropdown panel */
+  .dropdown {
+    position: relative;
+  }
+
+  .dropdown-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 120px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+    overflow: hidden;
+    z-index: 100;
+    animation: dropIn .15s ease;
+  }
+
+  @keyframes dropIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .dropdown.open .dropdown-menu { display: block; }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 14px;
+    font-family: var(--font);
+    font-size: 13px;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background .15s, color .15s;
+    white-space: nowrap;
+  }
+
+  .dropdown-item:hover { background: var(--surface-2); color: var(--text); }
+  .dropdown-item.active { color: var(--accent); font-weight: 500; }
+  .dropdown-item .item-check { width: 14px; opacity: 0; }
+  .dropdown-item.active .item-check { opacity: 1; }
+
+  /* Admin link button */
+  .admin-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 13px;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    text-decoration: none;
+    box-shadow: var(--shadow);
+    transition: background .18s, color .18s;
+  }
+
+  .admin-link:hover { background: var(--surface-2); color: var(--text); }
+  .admin-link svg { opacity: .7; }
+
+  /* ── Card ───────────────────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    transition: background .25s, border-color .25s;
+  }
+
+  /* ── Filters ────────────────────────────────────────────────── */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-end;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .field label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: .4px;
+    text-transform: uppercase;
+  }
+
+  /* FIX: explicit bg + color so dark mode dropdown looks correct */
+  select, input[type="date"] {
+    padding: 7px 10px;
+    font-size: 13px;
+    font-family: var(--font);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--select-border);
+    background: var(--select-bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color .18s, box-shadow .18s;
+    appearance: auto;
+    -webkit-appearance: auto;
+    color-scheme: light;
+  }
+
+  /* Force browser native calendar popup into dark mode */
+  [data-theme="dark"] select,
+  [data-theme="dark"] input[type="date"] { color-scheme: dark; }
+
+  @media (prefers-color-scheme: dark) {
+    [data-theme="auto"] select,
+    [data-theme="auto"] input[type="date"] { color-scheme: dark; }
+  }
+
+  select:focus, input[type="date"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+
+  .apply-btn {
+    padding: 7px 18px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    transition: background .18s, transform .1s;
+  }
+
+  .apply-btn:hover { background: var(--accent-hover); }
+  .apply-btn:active { transform: scale(.97); }
+
+  /* ── Chart ──────────────────────────────────────────────────── */
+  .chart-wrap { position: relative; max-height: 340px; }
+
+  /* ── Table ──────────────────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--surface-2); }
+  tbody tr.user-divider td { border-top: 2px solid var(--border); }
+  td.user-cell { font-weight: 600; color: var(--text); }
+
+  /* Pagination */
+  .pagination-bar {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    margin-top: 12px;
+  }
+  .pag-btn {
+    padding: 5px 14px;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .pag-btn:hover:not(:disabled) { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .pag-btn:disabled { opacity: .35; cursor: not-allowed; }
+  .pag-info { font-size: 12px; color: var(--text-muted); min-width: 80px; text-align: center; }
+
+  /* Granularity badge & view switch */
+  .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .view-switch {
+    display: inline-flex;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    gap: 2px;
+  }
+  .view-btn {
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .view-btn:hover {
+    color: var(--text);
+  }
+  .view-btn.active {
+    background: var(--surface);
+    color: var(--accent);
+    box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    font-weight: 600;
+  }
+  .gran-badge {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px 9px;
+  }
+
+  /* ── Empty state ────────────────────────────────────────────── */
+  .empty {
+    color: var(--text-muted);
+    font-size: 14px;
+    padding: 32px 0;
+    text-align: center;
+  }
+
+  /* ── Responsive ─────────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    .page-wrap { padding: 16px 14px 40px; }
+    .header { flex-direction: column; }
+    .header-right { width: 100%; justify-content: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1 id="titleText">Traffic Stats</h1>
+      <p class="sub" id="subText">Filter traffic data by user / node / date range</p>
+    </div>
+
+    <div class="header-right">
+
+      <!-- Theme dropdown -->
+      <div class="dropdown" id="themeDropdown">
+        <button class="icon-btn" id="themeBtn" aria-haspopup="true" aria-expanded="false" aria-label="Theme">
+          <span id="themeBtnIcon">🖥️</span>
+          <svg class="chevron" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polyline points="2,3.5 5,6.5 8,3.5"/>
+          </svg>
+        </button>
+        <div class="dropdown-menu" role="menu">
+          <button class="dropdown-item" data-theme-val="auto">
+            <svg class="item-check" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,7 5.5,10.5 12,3"/></svg>
+            <span>🖥️</span> <span data-i18n="themeAuto">Auto</span>
+          </button>
+          <button class="dropdown-item" data-theme-val="light">
+            <svg class="item-check" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,7 5.5,10.5 12,3"/></svg>
+            <span>☀️</span> <span data-i18n="themeLight">Light</span>
+          </button>
+          <button class="dropdown-item" data-theme-val="dark">
+            <svg class="item-check" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,7 5.5,10.5 12,3"/></svg>
+            <span>🌙</span> <span data-i18n="themeDark">Dark</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Language dropdown -->
+      <div class="dropdown" id="langDropdown">
+        <button class="icon-btn" id="langBtn" aria-haspopup="true" aria-expanded="false" aria-label="Language">
+          <span id="langBtnLabel">EN</span>
+          <svg class="chevron" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polyline points="2,3.5 5,6.5 8,3.5"/>
+          </svg>
+        </button>
+        <div class="dropdown-menu" role="menu">
+          <button class="dropdown-item" data-lang-val="auto">
+            <svg class="item-check" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,7 5.5,10.5 12,3"/></svg>
+            <span data-i18n="langAuto">Auto</span>
+          </button>
+          <button class="dropdown-item" data-lang-val="en">
+            <svg class="item-check" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,7 5.5,10.5 12,3"/></svg>
+            <span>English</span>
+          </button>
+          <button class="dropdown-item" data-lang-val="zh">
+            <svg class="item-check" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,7 5.5,10.5 12,3"/></svg>
+            <span>中文</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Admin link -->
+      <a href="/admin/" class="admin-link" id="adminLink">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--accent)" stroke="none">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span id="adminLinkText">Admin</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters Card -->
+  <div class="card">
+    <div class="filters">
+      <div class="field">
+        <label for="userFilter" id="labelUser">User</label>
+        <select id="userFilter"><option value="" id="optAllUser">All</option></select>
+      </div>
+      <div class="field">
+        <label for="nodeFilter" id="labelNode">Node</label>
+        <select id="nodeFilter"><option value="" id="optAllNode">All</option></select>
+      </div>
+      <div class="field">
+        <label for="startDate" id="labelStart">Start Date</label>
+        <input type="date" id="startDate" />
+      </div>
+      <div class="field">
+        <label for="endDate" id="labelEnd">End Date</label>
+        <input type="date" id="endDate" />
+      </div>
+      <button class="apply-btn" id="applyBtn">Apply</button>
+    </div>
+  </div>
+
+  <!-- Chart Card -->
+  <div class="card" id="chartCard">
+    <div class="chart-header">
+      <div class="view-switch" id="viewSwitch">
+        <button type="button" class="view-btn active" data-view="user" id="viewBtnUser">By User</button>
+        <button type="button" class="view-btn" data-view="node" id="viewBtnNode">By Node</button>
+        <button type="button" class="view-btn" data-view="total" id="viewBtnTotal">Total</button>
+      </div>
+      <span class="gran-badge" id="granBadge"></span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="trafficChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Table Card -->
+  <div class="card" id="tableCard">
+    <table id="userTable">
+      <thead>
+        <tr>
+          <th id="thTime">Time</th>
+          <th id="thUser">User</th>
+          <th id="thNode">Node</th>
+          <th id="thUp">Upload</th>
+          <th id="thDown">Download</th>
+          <th id="thTotal">Total</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div id="emptyState" class="empty" style="display:none">No data in selected range</div>
+    <div class="pagination-bar" id="paginationBar">
+      <button class="pag-btn" id="prevBtn" disabled>Prev</button>
+      <span class="pag-info" id="pageInfo">Page 1 / 1</span>
+      <button class="pag-btn" id="nextBtn" disabled>Next</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

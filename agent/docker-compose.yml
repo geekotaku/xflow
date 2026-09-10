@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  xflow-agent:
+    build: .
+    image: ghcr.io/geekotaku/xflow-agent:latest
+    container_name: xflow-agent
+    restart: unless-stopped
+    # Use host network mode so the agent can directly access Xray's gRPC API
+    # listening on 127.0.0.1:10085 on the host.
+    network_mode: "host"
+    volumes:
+      - xflow-agent-data:/data
+    environment:
+      - STATE_FILE=/data/.xflow-state.json
+    command: >
+      -e https://xflow.example.com
+      -t your_node_token
+      -i 15
+      --node hk-node-01
+      --api 127.0.0.1:10085
+
+volumes:
+  xflow-agent-data:

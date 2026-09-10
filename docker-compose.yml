@@ -1,0 +1,17 @@
+services:
+  xflow:
+    build: .
+    image: ghcr.io/geekotaku/xflow:latest
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      DB_PATH: /data/xflow.db
+      # FLOW_DEFAULT_TOTAL: "1099511627776"  # optional, bytes, defaults to 1TB
+      # RETENTION_DAYS: "90"                  # optional, defaults to 90 days (3 months), 0 to disable
+    volumes:
+      - xflow-data:/data
+    restart: unless-stopped
+
+volumes:
+  xflow-data:

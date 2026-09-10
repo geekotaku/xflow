@@ -1,0 +1,101 @@
+name: Create GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Release Packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Extract Tag Version
+        id: version
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG_NAME#v}"
+          echo "tag=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      # 1. Build & Package xflow Server
+      - name: Build & Package xflow Server
+        run: |
+          npm ci
+          npm run build
+          VERSION="${{ steps.version.outputs.version }}"
+          # Create archive with prebuilt dist, frontend static assets, configs and scripts
+          tar -czf "xflow-${VERSION}.tar.gz" \
+            dist/ \
+            public/ \
+            package.json \
+            package-lock.json \
+            docker-compose.yml \
+            Dockerfile \
+            install.sh \
+            README.md \
+            LICENSE
+
+      # 2. Build & Package xflow-agent
+      - name: Build & Package xflow-agent
+        run: |
+          cd agent
+          npm ci
+          npm run build
+          VERSION="${{ steps.version.outputs.version }}"
+          # Create archive with prebuilt agent dist, proto files, configs and scripts
+          tar -czf "../xflow-agent-${VERSION}.tar.gz" \
+            dist/ \
+            proto/ \
+            package.json \
+            package-lock.json \
+            docker-compose.yml \
+            Dockerfile \
+            install.sh \
+            README.md
+
+      # 3. Create GitHub Release
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Release ${{ steps.version.outputs.tag }}"
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            xflow-${{ steps.version.outputs.version }}.tar.gz
+            xflow-agent-${{ steps.version.outputs.version }}.tar.gz
+          body: |
+            ## xflow ${{ steps.version.outputs.tag }}
+
+            ### ✨ Highlights & Features
+            - **Zero-Loss Monotonic Delta Tracking**: `xflow-agent` tracks cumulative counters (`reset=false`) without resetting Xray, eliminating race-condition packet loss between collection and upload.
+            - **State File Persistence & Cold-Start Calibration**: Agent automatically persists its byte cursor to `.xflow-state.json`, smoothly recovering across restarts and preventing historical spikes on first install.
+            - **Multi-View Interactive Dashboard**: Segmented view switch for **By User**, **By Node**, and **Total Bandwidth**, with paginated history records and local timezone conversion.
+            - **Sub-Store Subscription (`/flow`)**: Provides standard `subscription-userinfo` headers and JSON breakdown with configurable default quota (`FLOW_DEFAULT_TOTAL`, default: 1 TB).
+            - **Automated Data Retention**: Purges historical traffic records older than `RETENTION_DAYS` (default: 90 days / 3 months) on startup and every 24h.
+            - **Linux One-Click Installers**: Streamlined deployment scripts for both central server and proxy node agents.
+
+            ### 📦 Docker Images (GitHub Container Registry)
+            - **xflow Server**: `docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}`
+            - **xflow-agent**: `docker pull ghcr.io/${{ github.repository_owner }}/xflow-agent:${{ steps.version.outputs.version }}`
+
+            ### 🚀 One-Click Installers
+            - **Server**: `sudo bash <(curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh)`
+            - **Agent**: `sudo bash <(curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/agent/install.sh)`
+
+            ### 📁 Prebuilt Archives
+            Ready-to-run release bundles containing pre-compiled `dist/` bundles are attached below.

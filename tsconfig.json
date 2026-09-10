@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "rootDir": "src",
+
+    /* 类型检查 */
+    "strict": true,
+    "skipLibCheck": true,
+
+    /* 输出文件与调试 */
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": ["src"]
+}
