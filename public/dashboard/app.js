@@ -399,23 +399,36 @@ function renderChart(data) {
   const canvas = document.getElementById('trafficChart');
   if (!canvas) return;
 
+  const isMobile = window.innerWidth < 640;
+
   chart = new Chart(canvas, {
     type: 'bar',
     data: { labels, datasets },
     options: {
       responsive: true,
-      maintainAspectRatio: true,
+      maintainAspectRatio: !isMobile,
       interaction: { mode: 'index', intersect: false },
       scales: {
         x: {
           stacked: true,
           grid:  { color: colors.grid },
-          ticks: { color: colors.tick, maxRotation: 45, autoSkip: true, maxTicksLimit: 24 },
+          ticks: {
+            color: colors.tick,
+            maxRotation: isMobile ? 0 : 45,
+            autoSkip: true,
+            maxTicksLimit: isMobile ? 6 : 20,
+            font: { size: isMobile ? 10 : 11 },
+          },
         },
         y: {
           stacked: true,
           grid:  { color: colors.grid },
-          ticks: { color: colors.tick, callback: v => formatBytes(v) },
+          ticks: {
+            color: colors.tick,
+            callback: v => formatBytes(v),
+            font: { size: isMobile ? 10 : 11 },
+            maxTicksLimit: isMobile ? 5 : 8,
+          },
         },
       },
       plugins: {

@@ -296,6 +296,12 @@
   .chart-wrap { position: relative; max-height: 340px; }
 
   /* ── Table ──────────────────────────────────────────────────── */
+  .table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   table {
     width: 100%;
     border-collapse: collapse;
@@ -306,6 +312,7 @@
     text-align: left;
     padding: 10px 12px;
     border-bottom: 1px solid var(--border);
+    white-space: nowrap;
   }
 
   th {
@@ -403,10 +410,62 @@
   }
 
   /* ── Responsive ─────────────────────────────────────────────── */
-  @media (max-width: 600px) {
-    .page-wrap { padding: 16px 14px 40px; }
-    .header { flex-direction: column; }
-    .header-right { width: 100%; justify-content: flex-start; }
+  @media (max-width: 640px) {
+    .page-wrap {
+      padding: 14px 10px 48px;
+    }
+    .header {
+      flex-direction: column;
+      margin-bottom: 16px;
+      gap: 12px;
+    }
+    .header-left h1 {
+      font-size: 20px;
+    }
+    .header-left .sub {
+      font-size: 12px;
+    }
+    .header-right {
+      width: 100%;
+      justify-content: flex-start;
+      gap: 8px;
+    }
+    .card {
+      padding: 14px 12px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+    }
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .field {
+      min-width: 0;
+      width: 100%;
+    }
+    .field select, .field input[type="date"] {
+      width: 100%;
+      padding: 8px 6px;
+      font-size: 13px;
+    }
+    .apply-btn {
+      grid-column: 1 / -1;
+      width: 100%;
+      padding: 9px;
+      font-size: 14px;
+      margin-top: 2px;
+    }
+    .chart-wrap {
+      max-height: 260px;
+    }
+    .table-wrap table {
+      min-width: 520px;
+    }
+    th, td {
+      padding: 8px 10px;
+      font-size: 12.5px;
+    }
   }
 </style>
 </head>
@@ -520,19 +579,21 @@
 
   <!-- Table Card -->
   <div class="card" id="tableCard">
-    <table id="userTable">
-      <thead>
-        <tr>
-          <th id="thTime">Time</th>
-          <th id="thUser">User</th>
-          <th id="thNode">Node</th>
-          <th id="thUp">Upload</th>
-          <th id="thDown">Download</th>
-          <th id="thTotal">Total</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div class="table-wrap">
+      <table id="userTable">
+        <thead>
+          <tr>
+            <th id="thTime">Time</th>
+            <th id="thUser">User</th>
+            <th id="thNode">Node</th>
+            <th id="thUp">Upload</th>
+            <th id="thDown">Download</th>
+            <th id="thTotal">Total</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
     <div id="emptyState" class="empty" style="display:none">No data in selected range</div>
     <div class="pagination-bar" id="paginationBar">
       <button class="pag-btn" id="prevBtn" disabled>Prev</button>
