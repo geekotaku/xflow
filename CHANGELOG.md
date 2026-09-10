@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - Unreleased
+
+### 🎨 UI & UX Improvements
+- **Table Height Stabilization**: Auto-pads placeholder rows on the last page to maintain constant 10-row table height and eliminate pagination button jumping.
+
+### ⚙️ CI/CD & Build Optimizations
+- **Automated Release Notes**: Automatically parses version-specific changelog notes from `CHANGELOG.md` for GitHub Releases without hardcoded workflows.
+- **Docker CI Optimization**: Multi-arch Docker images are built only upon new version release tags (e.g. `v*`), avoiding unnecessary builds on regular branch pushes.
+
+---
+
 ## [1.0.1] - 2026-09-10
 
 ### 📱 Mobile & UI Improvements
@@ -11,7 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **2x2 Grid Filter Controls**: Filter inputs (User, Node, Start/End Date) adapt into an intuitive 2-column grid on mobile with full-width touch buttons.
 - **Horizontal Table Scrolling**: Wrapped stats tables inside responsive `.table-wrap` containers with zero-wrap (`white-space: nowrap`) and native iOS/Android momentum scrolling.
 - **Adaptive Chart Labels**: Chart.js automatically consolidates X-axis time labels on mobile devices (max 6 ticks) to avoid overlapping angled clutter.
-- **Table Height Stabilization**: Auto-pads placeholder rows on the last page to maintain constant 10-row table height and eliminate pagination button jumping.
 - **Admin Mobile Support**: Node/Token management page now fully supports mobile viewports and long token horizontal scrolling.
 
 ### 🛡️ Docker & Reliability
