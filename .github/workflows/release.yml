@@ -81,13 +81,12 @@ jobs:
           body: |
             ## xflow ${{ steps.version.outputs.tag }}
 
-            ### ✨ Highlights & Features
-            - **Zero-Loss Monotonic Delta Tracking**: `xflow-agent` tracks cumulative counters (`reset=false`) without resetting Xray, eliminating race-condition packet loss between collection and upload.
-            - **State File Persistence & Cold-Start Calibration**: Agent automatically persists its byte cursor to `.xflow-state.json`, smoothly recovering across restarts and preventing historical spikes on first install.
-            - **Multi-View Interactive Dashboard**: Segmented view switch for **By User**, **By Node**, and **Total Bandwidth**, with paginated history records and local timezone conversion.
-            - **Sub-Store Subscription (`/flow`)**: Provides standard `subscription-userinfo` headers and JSON breakdown with configurable default quota (`FLOW_DEFAULT_TOTAL`, default: 1 TB).
-            - **Automated Data Retention**: Purges historical traffic records older than `RETENTION_DAYS` (default: 90 days / 3 months) on startup and every 24h.
-            - **Linux One-Click Installers**: Streamlined deployment scripts for both central server and proxy node agents.
+            ### ✨ Highlights & Improvements in v1.0.1
+            - **Mobile & Full-Width Experience**: Completely redesigned responsive layout for smartphones with 2x2 grid filter controls, compact screen margin utilization, and touch-friendly full-width action buttons.
+            - **Horizontal Table Scrolling**: Added zero-wrap table containers with smooth iOS/Android momentum scrolling, completely eliminating line-breaks in timestamps and bandwidth values.
+            - **Intelligent Chart Ticks**: Auto-adjusts Chart.js time labels on mobile viewports to prevent overlapping and angled clutter.
+            - **Docker Permissions & Reliability**: Standardized Docker runtime containers to root execution, eliminating volume mount `EACCES (Permission denied)` issues on external host directories.
+            - **Agent Auto-Directory Creation**: Agent state file persistence automatically ensures recursive parent directory creation without manual intervention.
 
             ### 📦 Docker Images (GitHub Container Registry)
             - **xflow Server**: `docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}`
