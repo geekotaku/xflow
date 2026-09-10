@@ -5,4 +5,5 @@ data/*.db-*
 !data/.gitkeep
 .env
 .xflow-state.json
+RELEASE_BODY.md
 npm-debug.log*

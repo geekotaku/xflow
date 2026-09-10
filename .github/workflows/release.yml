@@ -46,6 +46,7 @@ jobs:
             docker-compose.yml \
             Dockerfile \
             install.sh \
+            CHANGELOG.md \
             README.md \
             LICENSE
 
@@ -67,7 +68,14 @@ jobs:
             install.sh \
             README.md
 
-      # 3. Create GitHub Release
+      # 3. Generate Release Notes from CHANGELOG.md
+      - name: Generate Release Body from CHANGELOG.md
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: node .github/scripts/generate-release-notes.js
+
+      # 4. Publish GitHub Release
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -75,26 +83,7 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+          body_path: RELEASE_BODY.md
           files: |
             xflow-${{ steps.version.outputs.version }}.tar.gz
             xflow-agent-${{ steps.version.outputs.version }}.tar.gz
-          body: |
-            ## xflow ${{ steps.version.outputs.tag }}
-
-            ### ✨ Highlights & Improvements in v1.0.1
-            - **Mobile & Full-Width Experience**: Completely redesigned responsive layout for smartphones with 2x2 grid filter controls, compact screen margin utilization, and touch-friendly full-width action buttons.
-            - **Horizontal Table Scrolling**: Added zero-wrap table containers with smooth iOS/Android momentum scrolling, completely eliminating line-breaks in timestamps and bandwidth values.
-            - **Intelligent Chart Ticks**: Auto-adjusts Chart.js time labels on mobile viewports to prevent overlapping and angled clutter.
-            - **Docker Permissions & Reliability**: Standardized Docker runtime containers to root execution, eliminating volume mount `EACCES (Permission denied)` issues on external host directories.
-            - **Agent Auto-Directory Creation**: Agent state file persistence automatically ensures recursive parent directory creation without manual intervention.
-
-            ### 📦 Docker Images (GitHub Container Registry)
-            - **xflow Server**: `docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}`
-            - **xflow-agent**: `docker pull ghcr.io/${{ github.repository_owner }}/xflow-agent:${{ steps.version.outputs.version }}`
-
-            ### 🚀 One-Click Installers
-            - **Server**: `sudo bash <(curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh)`
-            - **Agent**: `sudo bash <(curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/agent/install.sh)`
-
-            ### 📁 Prebuilt Archives
-            Ready-to-run release bundles containing pre-compiled `dist/` bundles are attached below.
