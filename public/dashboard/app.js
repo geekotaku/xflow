@@ -1,8 +1,8 @@
 // ── i18n strings ────────────────────────────────────────────────
 const I18N = {
   zh: {
-    title:      '流量统计',
-    sub:        '按用户 / 节点 / 时间范围筛选自建节点的流量数据',
+    title:      '自建节点流量统计',
+    sub:        '汇总 Xray 节点与用户流量明细，提供多维数据分析并支持 Sub-Store 订阅同步',
     labelUser:  '用户',
     labelNode:  '节点',
     labelStart: '起始日期',
@@ -39,8 +39,8 @@ const I18N = {
     drilldownHint: '💡 点击柱状图下钻按小时查看',
   },
   en: {
-    title:      'Traffic Stats',
-    sub:        'Filter traffic data by user / node / date range',
+    title:      'Node Traffic Analytics',
+    sub:        'Multi-dimensional Xray traffic analytics across nodes and users with Sub-Store integration',
     labelUser:  'User',
     labelNode:  'Node',
     labelStart: 'Start Date',

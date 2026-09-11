@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📊 Dashboard & Analytics
 - **Daily-to-Hourly Chart Drill-Down**: Clicking any column in the daily traffic chart instantly drills down into that specific day's 24-hour hourly view, complete with hover cursor indicators, tooltip hints, and a dedicated "Back to Daily" return button to restore the previous date range.
+- **Refined Branding & Subtitles**: Updated dashboard header titles and descriptive subtitles in both Chinese and English to formally highlight multi-dimensional Xray node traffic auditing and Sub-Store synchronization.
 
 ### ⚙️ Container & Configuration
 - **Container Timezone Support (`tzdata`)**: Added the `tzdata` package to the Alpine runtime Docker image and added a `TZ` option in `docker-compose.yml`, enabling scheduled maintenance tasks (e.g. daily 02:00 AM database cleanup and compaction) to execute according to the configured local timezone (e.g. `TZ=Asia/Shanghai`).
