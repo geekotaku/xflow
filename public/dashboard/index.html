@@ -341,27 +341,150 @@
   .pagination-bar {
     display: none;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
     gap: 12px;
     padding-top: 16px;
     border-top: 1px solid var(--border);
     margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-muted);
   }
-  .pag-btn {
-    padding: 5px 14px;
-    font-family: var(--font);
+
+  .pag-left, .pag-right, .pag-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pag-select {
+    padding: 4px 8px;
     font-size: 12px;
+    font-family: var(--font);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--select-border);
+    background: var(--select-bg);
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .pag-select:focus { border-color: var(--accent); }
+
+  .pag-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 4px;
+    font-family: var(--font);
+    font-size: 13px;
     font-weight: 500;
     border-radius: var(--radius-sm);
     border: 1px solid var(--border);
     background: var(--surface-2);
     color: var(--text-muted);
     cursor: pointer;
-    transition: background .15s, color .15s;
+    transition: all .15s;
+    user-select: none;
   }
-  .pag-btn:hover:not(:disabled) { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .pag-btn:disabled { opacity: .35; cursor: not-allowed; }
-  .pag-info { font-size: 12px; color: var(--text-muted); min-width: 80px; text-align: center; }
+  .pag-btn:hover:not(:disabled) {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .pag-btn:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+  }
+  .pag-btn.icon {
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 6px;
+  }
+
+  .pag-numbers {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .pag-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 6px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: all .15s;
+    user-select: none;
+  }
+  .pag-num:hover:not(.active) {
+    background: var(--surface-2);
+    color: var(--accent);
+  }
+  .pag-num.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .pag-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 28px;
+    color: var(--text-muted);
+    user-select: none;
+    font-size: 12px;
+  }
+
+  .pag-goto-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12.5px;
+  }
+  .pag-input {
+    width: 42px;
+    height: 26px;
+    text-align: center;
+    font-size: 12.5px;
+    font-family: var(--font);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--select-border);
+    background: var(--select-bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s;
+  }
+  .pag-input:focus { border-color: var(--accent); }
+  .pag-input::-webkit-outer-spin-button,
+  .pag-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .pag-input[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  .pag-total {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    margin-left: 4px;
+  }
 
   /* Granularity badge & view switch */
   .chart-header {
@@ -474,6 +597,22 @@
     th, td {
       padding: 8px 10px;
       font-size: 12.5px;
+    }
+    .pagination-bar {
+      justify-content: center;
+      gap: 10px;
+    }
+    .pag-nav {
+      order: 1;
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .pag-left {
+      order: 2;
+    }
+    .pag-right {
+      order: 3;
     }
   }
 </style>
@@ -592,6 +731,7 @@
       <table id="userTable">
         <thead>
           <tr>
+            <th id="thId" style="width: 48px;">#</th>
             <th id="thTime">Time</th>
             <th id="thUser">User</th>
             <th id="thNode">Node</th>
@@ -605,9 +745,29 @@
     </div>
     <div id="emptyState" class="empty" style="display:none">No data in selected range</div>
     <div class="pagination-bar" id="paginationBar">
-      <button class="pag-btn" id="prevBtn" disabled>Prev</button>
-      <span class="pag-info" id="pageInfo">Page 1 / 1</span>
-      <button class="pag-btn" id="nextBtn" disabled>Next</button>
+      <div class="pag-left">
+        <select id="pageSizeSelect" class="pag-select" aria-label="Page size">
+          <option value="10">10条/页</option>
+          <option value="15">15条/页</option>
+          <option value="20">20条/页</option>
+          <option value="50">50条/页</option>
+        </select>
+      </div>
+      <div class="pag-nav">
+        <button class="pag-btn icon" id="firstBtn" title="First Page">&laquo;</button>
+        <button class="pag-btn icon" id="prevBtn" title="Previous Page">&lsaquo;</button>
+        <div class="pag-numbers" id="pagNumbers"></div>
+        <button class="pag-btn icon" id="nextBtn" title="Next Page">&rsaquo;</button>
+        <button class="pag-btn icon" id="lastBtn" title="Last Page">&raquo;</button>
+      </div>
+      <div class="pag-right">
+        <span class="pag-goto-wrap">
+          <span id="labelGoto">前往</span>
+          <input type="number" id="jumpPageInput" class="pag-input" min="1" />
+          <span id="labelPageSuffix">页</span>
+        </span>
+        <span class="pag-total" id="pagTotal">共 0 条记录</span>
+      </div>
     </div>
   </div>
 

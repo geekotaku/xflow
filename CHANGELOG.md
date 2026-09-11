@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.2] - Unreleased
 
 ### 🎨 UI & UX Improvements
-- **Table Height Stabilization**: Auto-pads placeholder rows on the last page to maintain constant 10-row table height and eliminate pagination button jumping.
+- **Row Index & Total Count**: Added 1-based continuous sequence column (`#`) to data records and total count display (`Total X records`).
+- **Advanced Pagination Toolbar**: Enhanced pagination controls with page size selector (10, 15, 20, 50 / page), first/last page shortcuts (`<<` / `>>`), numeric page buttons, and direct page jumping.
+- **Table Height Stabilization**: Auto-pads placeholder rows on the last page to maintain constant table height and eliminate pagination button jumping.
 
 ### ⚙️ CI/CD & Build Optimizations
 - **Automated Release Notes**: Automatically parses version-specific changelog notes from `CHANGELOG.md` for GitHub Releases without hardcoded workflows.

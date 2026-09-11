@@ -25,6 +25,11 @@ const I18N = {
     prev:       '上一页',
     next:       '下一页',
     pageInfo:   (cur, total) => `第 ${cur} / ${total} 页`,
+    thId:       '#',
+    goto:       '前往',
+    pageSuffix: '页',
+    pageSize:   s => `${s}条/页`,
+    totalRecords: n => `共 ${n} 条记录`,
     viewUser:   '按用户',
     viewNode:   '按节点',
     viewTotal:  '总流量',
@@ -56,6 +61,11 @@ const I18N = {
     prev:       'Prev',
     next:       'Next',
     pageInfo:   (cur, total) => `Page ${cur} / ${total}`,
+    thId:       '#',
+    goto:       'Go to',
+    pageSuffix: '',
+    pageSize:   s => `${s} / page`,
+    totalRecords: n => `Total ${n} records`,
     viewUser:   'By User',
     viewNode:   'By Node',
     viewTotal:  'Total',
@@ -71,7 +81,9 @@ let currentView     = 'user'; // 'user' | 'node' | 'total'
 let cachedStatsData = null;
 let chart           = null;
 let recordsPage     = 1;
-const PAGE_SIZE     = 10;
+let recordsPageSize = 10;
+let recordsTotal    = 0;
+let recordsPages    = 1;
 
 // ── Helpers ──────────────────────────────────────────────────────
 function formatBytes(bytes) {
@@ -212,6 +224,7 @@ function applyLang(lang) {
   setTxt('optAllUser',  'optAll');
   setTxt('optAllNode',  'optAll');
   setTxt('applyBtn',    'applyBtn');
+  setTxt('thId',        'thId');
   setTxt('thTime',      'thTime');
   setTxt('thUser',      'thUser');
   setTxt('thNode',      'thNode');
@@ -219,11 +232,23 @@ function applyLang(lang) {
   setTxt('thDown',      'thDown');
   setTxt('thTotal',     'thTotal');
   setTxt('emptyState',  'empty');
-  setTxt('prevBtn',     'prev');
-  setTxt('nextBtn',     'next');
   setTxt('viewBtnUser', 'viewUser');
   setTxt('viewBtnNode', 'viewNode');
   setTxt('viewBtnTotal','viewTotal');
+  setTxt('labelGoto',   'goto');
+  setTxt('labelPageSuffix', 'pageSuffix');
+
+  const pageSizeSel = document.getElementById('pageSizeSelect');
+  if (pageSizeSel) {
+    Array.from(pageSizeSel.options).forEach(opt => {
+      opt.textContent = t('pageSize', opt.value);
+    });
+  }
+
+  const pagTotal = document.getElementById('pagTotal');
+  if (pagTotal) {
+    pagTotal.textContent = t('totalRecords', recordsTotal);
+  }
 
   document.title = `xflow · ${t('title')}`;
 
@@ -469,20 +494,79 @@ document.getElementById('viewSwitch')?.addEventListener('click', e => {
   if (cachedStatsData) renderChart(cachedStatsData);
 });
 
+// ── Pagination helpers ───────────────────────────────────────────
+function renderPageNumbers(cur, total) {
+  const container = document.getElementById('pagNumbers');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (total <= 1) return;
+
+  const pages = [];
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i);
+  } else {
+    if (cur <= 4) {
+      pages.push(1, 2, 3, 4, 5, '...', total);
+    } else if (cur >= total - 3) {
+      pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total);
+    } else {
+      pages.push(1, '...', cur - 1, cur, cur + 1, '...', total);
+    }
+  }
+
+  for (const p of pages) {
+    if (p === '...') {
+      const span = document.createElement('span');
+      span.className = 'pag-ellipsis';
+      span.textContent = '•••';
+      container.appendChild(span);
+    } else {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pag-num' + (p === cur ? ' active' : '');
+      btn.textContent = p;
+      if (p !== cur) {
+        btn.addEventListener('click', () => loadRecords(p));
+      }
+      container.appendChild(btn);
+    }
+  }
+}
+
+function handleJumpPage() {
+  const input = document.getElementById('jumpPageInput');
+  if (!input) return;
+  let p = parseInt(input.value, 10);
+  if (isNaN(p) || p < 1) p = 1;
+  if (p > recordsPages) p = recordsPages;
+  if (p !== recordsPage) {
+    loadRecords(p);
+  } else {
+    input.value = recordsPage;
+  }
+}
+
 // ── Records table (paginated) ────────────────────────────────────
 async function loadRecords(page = 1) {
   recordsPage = page;
   const q = buildQuery();
-  const res = await fetch(`/api/stats/records?${q}&page=${page}&limit=${PAGE_SIZE}`);
+  const res = await fetch(`/api/stats/records?${q}&page=${page}&limit=${recordsPageSize}`);
   const data = await res.json();
+
+  recordsTotal = data.total || 0;
+  recordsPages = data.pages || 1;
 
   const tbody = document.querySelector('#userTable tbody');
   tbody.innerHTML = '';
 
+  let idx = 0;
   for (const row of data.records) {
     const tr = document.createElement('tr');
     const total = row.uplink + row.downlink;
+    const rowNum = (data.page - 1) * recordsPageSize + idx + 1;
     tr.innerHTML =
+      `<td>${rowNum}</td>` +
       `<td>${formatTimestamp(row.reported_at)}</td>` +
       `<td>${row.user}</td>` +
       `<td>${row.node}</td>` +
@@ -490,42 +574,48 @@ async function loadRecords(page = 1) {
       `<td>${formatBytes(row.downlink)}</td>` +
       `<td><strong>${formatBytes(total)}</strong></td>`;
     tbody.appendChild(tr);
+    idx++;
   }
 
   // Pad empty placeholder rows so table height stays constant across pages (avoids pagination button jumping)
-  const emptyCount = PAGE_SIZE - (data.records?.length || 0);
-  if (emptyCount > 0 && data.pages > 1) {
+  const emptyCount = recordsPageSize - (data.records?.length || 0);
+  if (emptyCount > 0 && recordsPages > 1) {
     for (let i = 0; i < emptyCount; i++) {
       const tr = document.createElement('tr');
       tr.className = 'empty-row';
       tr.setAttribute('aria-hidden', 'true');
-      tr.innerHTML = '<td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>';
+      tr.innerHTML = '<td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>';
       tbody.appendChild(tr);
     }
   }
 
   // Update pagination controls
-  const pageInfo = document.getElementById('pageInfo');
+  const firstBtn = document.getElementById('firstBtn');
   const prevBtn  = document.getElementById('prevBtn');
   const nextBtn  = document.getElementById('nextBtn');
+  const lastBtn  = document.getElementById('lastBtn');
+  const pagTotal = document.getElementById('pagTotal');
+  const jumpInput = document.getElementById('jumpPageInput');
 
-  if (pageInfo) {
-    pageInfo._cur = data.page;
-    pageInfo._tot = data.pages || 1;
-    pageInfo.textContent = t('pageInfo', data.page, data.pages || 1);
-  }
-  if (prevBtn) {
-    prevBtn.textContent = t('prev');
-    prevBtn.disabled = data.page <= 1;
-  }
-  if (nextBtn) {
-    nextBtn.textContent = t('next');
-    nextBtn.disabled = data.page >= (data.pages || 1);
+  if (firstBtn) firstBtn.disabled = data.page <= 1;
+  if (prevBtn)  prevBtn.disabled  = data.page <= 1;
+  if (nextBtn)  nextBtn.disabled  = data.page >= recordsPages;
+  if (lastBtn)  lastBtn.disabled  = data.page >= recordsPages;
+
+  if (pagTotal) {
+    pagTotal.textContent = t('totalRecords', recordsTotal);
   }
 
-  // Show/hide pagination bar
+  if (jumpInput) {
+    jumpInput.value = data.page;
+    jumpInput.max = recordsPages;
+  }
+
+  renderPageNumbers(data.page, recordsPages);
+
+  // Show pagination bar if there are records
   const pagBar = document.getElementById('paginationBar');
-  if (pagBar) pagBar.style.display = data.pages > 1 ? 'flex' : 'none';
+  if (pagBar) pagBar.style.display = recordsTotal > 0 ? 'flex' : 'none';
 }
 
 // ── Refresh ──────────────────────────────────────────────────────
@@ -561,11 +651,35 @@ async function refresh() {
 
 applyBtn.addEventListener('click', () => { recordsPage = 1; refresh(); });
 
+document.getElementById('pageSizeSelect')?.addEventListener('change', e => {
+  recordsPageSize = Number(e.target.value);
+  loadRecords(1);
+});
+
+document.getElementById('firstBtn')?.addEventListener('click', () => {
+  if (recordsPage > 1) loadRecords(1);
+});
+
 document.getElementById('prevBtn')?.addEventListener('click', () => {
   if (recordsPage > 1) loadRecords(recordsPage - 1);
 });
+
 document.getElementById('nextBtn')?.addEventListener('click', () => {
-  loadRecords(recordsPage + 1);
+  if (recordsPage < recordsPages) loadRecords(recordsPage + 1);
+});
+
+document.getElementById('lastBtn')?.addEventListener('click', () => {
+  if (recordsPage < recordsPages) loadRecords(recordsPages);
+});
+
+document.getElementById('jumpPageInput')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    handleJumpPage();
+  }
+});
+document.getElementById('jumpPageInput')?.addEventListener('blur', () => {
+  handleJumpPage();
 });
 
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
