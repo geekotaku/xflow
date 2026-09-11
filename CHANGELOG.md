@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.4] - Unreleased
+## [1.0.4] - 2026-09-11
 
 ### 🐛 Bug Fixes
 - **Local Timezone Date Filtering**: Fixed an issue where date filter inputs (`startDate`, `endDate`) were parsed as UTC timestamps instead of browser local time, which caused records during the early hours of the selected start date to be omitted and the next day's early hours to be included in non-UTC timezones (e.g. UTC+8).
