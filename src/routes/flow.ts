@@ -11,12 +11,12 @@ function firstOfMonthUtc(): string {
   ).toISOString();
 }
 
-// End of the current UTC month (23:59:59 UTC) in Unix seconds
+// 1st of next UTC month (00:00:00 UTC) in Unix seconds
 function endOfMonthUtcSeconds(): number {
   const now = new Date();
   return Math.floor(
     new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59),
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0),
     ).getTime() / 1000,
   );
 }
