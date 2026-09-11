@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🌐 Sub-Store Integration
 - **Next-Month Expiration Alignment**: Adjusted the default dynamic expiration timestamp (`expire`) to the 1st of the next UTC month at 00:00:00 UTC.
 
+### 🗄️ Database & Storage Optimization
+- **Automated Daily Hourly Compaction**: Added a transactional database maintenance task that runs daily at 02:00 AM (and on startup) to aggregate raw reports older than 3 days into 1-hour summaries (`:00:00.000Z`) by user and node, dramatically reducing SQLite row count while preserving full historical accuracy.
+
 ---
 
 ## [1.0.2] - 2026-09-11
