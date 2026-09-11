@@ -431,7 +431,7 @@ function renderChart(data) {
     data: { labels, datasets },
     options: {
       responsive: true,
-      maintainAspectRatio: !isMobile,
+      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       scales: {
         x: {

@@ -14,7 +14,7 @@ A lightweight, self-hosted traffic aggregation and statistics server for Xray pr
   - Interactive multi-view charts: **By User**, **By Node**, and **Total Uplink/Downlink**.
   - Hourly or daily resolution depending on the selected date range.
   - Paginated detailed traffic records table with local timezone support.
-  - Light/Dark theme switching and multi-language support (English / Chinese, default: English).
+  - Light/Dark theme switching and multi-language support (English / Chinese, default: Auto).
 - **Node & Token Management (`/admin`)**:
   - Web UI and REST API to create nodes, rotate authentication tokens, and manage node lifecycles.
 - **Fast & Minimal**: Powered by Node.js, Express, and SQLite with WAL (Write-Ahead Logging) enabled.
