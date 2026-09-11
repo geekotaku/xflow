@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🌐 Sub-Store Integration
 - **Dynamic End-of-Month Expiration**: Added `expire` field to `/flow` endpoint (`subscription-userinfo` header & JSON) dynamically set to the last second of the current UTC month (customizable via `FLOW_DEFAULT_EXPIRE`).
+- **Client Profile Headers**: Added `profile-update-interval` (default: 24h, configurable via `PROFILE_UPDATE_INTERVAL`) and `profile-web-page-url` (configurable via `PROFILE_WEB_PAGE_URL`) for automatic subscription updates and dashboard links in proxy clients.
 
 ### ⚙️ CI/CD & Build Optimizations
 - **Automated Release Notes**: Automatically parses version-specific changelog notes from `CHANGELOG.md` for GitHub Releases without hardcoded workflows.

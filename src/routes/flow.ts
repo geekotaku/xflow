@@ -27,6 +27,15 @@ function endOfMonthUtcSeconds(): number {
 // your VPS's actual monthly bandwidth cap.
 const DEFAULT_TOTAL_BYTES = Number(process.env.FLOW_DEFAULT_TOTAL) || 1024 ** 4; // 1 TB
 
+// Auto-update interval in hours (header: profile-update-interval, default: 24)
+const PROFILE_UPDATE_INTERVAL =
+  process.env.PROFILE_UPDATE_INTERVAL !== undefined
+    ? Number(process.env.PROFILE_UPDATE_INTERVAL)
+    : 24;
+
+// Web page URL for clients (header: profile-web-page-url, optional)
+const PROFILE_WEB_PAGE_URL = process.env.PROFILE_WEB_PAGE_URL?.trim() || null;
+
 router.get("/", (req, res) => {
   const userParam = typeof req.query.user === "string" ? req.query.user : null;
   const users = userParam
@@ -77,6 +86,15 @@ router.get("/", (req, res) => {
     "subscription-userinfo",
     `upload=${upload}; download=${download}; total=${total}; expire=${expire}`,
   );
+
+  if (PROFILE_UPDATE_INTERVAL > 0) {
+    res.setHeader("profile-update-interval", String(PROFILE_UPDATE_INTERVAL));
+  }
+
+  if (PROFILE_WEB_PAGE_URL) {
+    res.setHeader("profile-web-page-url", PROFILE_WEB_PAGE_URL);
+  }
+
   res.json({
     user: users ? users.join(",") : null,
     range: { start: startIso, end: endIso },
@@ -84,6 +102,8 @@ router.get("/", (req, res) => {
     download,
     total,
     expire,
+    ...(PROFILE_UPDATE_INTERVAL > 0 ? { updateInterval: PROFILE_UPDATE_INTERVAL } : {}),
+    ...(PROFILE_WEB_PAGE_URL ? { webPageUrl: PROFILE_WEB_PAGE_URL } : {}),
   });
 });
 
