@@ -75,7 +75,7 @@ const I18N = {
 };
 
 // ── State ────────────────────────────────────────────────────────
-let currentLang     = localStorage.getItem('xflow-lang') || 'en';
+let currentLang     = localStorage.getItem('xflow-lang') || 'auto';
 let currentTheme    = localStorage.getItem('xflow-theme') || 'auto';
 let currentView     = 'user'; // 'user' | 'node' | 'total'
 let cachedStatsData = null;
@@ -684,6 +684,12 @@ document.getElementById('jumpPageInput')?.addEventListener('blur', () => {
 
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   if (currentTheme === 'auto' && cachedStatsData) renderChart(cachedStatsData);
+});
+
+window.addEventListener('languagechange', () => {
+  if (currentLang === 'auto') {
+    applyLang('auto');
+  }
 });
 
 // ── Init ─────────────────────────────────────────────────────────
