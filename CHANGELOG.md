@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ⚙️ Container & Configuration
 - **Container Timezone Support (`tzdata`)**: Added the `tzdata` package to the Alpine runtime Docker image and added a `TZ` option in `docker-compose.yml`, enabling scheduled maintenance tasks (e.g. daily 02:00 AM database cleanup and compaction) to execute according to the configured local timezone (e.g. `TZ=Asia/Shanghai`).
 
+### 📖 Documentation
+- **Chinese Documentation**: Added [`README_zh-CN.md`](./README_zh-CN.md) with bilingual navigation links.
+- **README Improvements**: Updated documentation with preview screenshots, latest configuration options, and Sub-Store integration guides.
+
 ---
 
 ## [1.0.3] - 2026-09-11

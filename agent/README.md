@@ -6,9 +6,9 @@ A lightweight agent that runs on each self-built Xray proxy node to query per-us
 
 ## Overview
 
-`xflow-agent` connects directly to Xray-core's `StatsService` over gRPC, periodically retrieves bandwidth consumption per user with `reset=true` (atomically reading and zeroing the counters), and POSTs the delta values to your `xflow` server.
+`xflow-agent` connects directly to Xray-core's `StatsService` over gRPC, periodically retrieves monotonic traffic counters (`reset=false`), calculates deltas from the last acknowledged report, and POSTs them to your `xflow` server.
 
-Because it queries delta values directly with `reset=true`, it requires no local database, disk persistence, or state storage on the proxy node.
+Byte cursors are safely persisted to `.xflow-state.json` to prevent race-condition traffic loss and ensure seamless resumption across service restarts.
 
 ---
 
@@ -175,8 +175,8 @@ journalctl -u xflow-agent -f
 
 ## Behavior & Design
 
-- **Zero-Loss Monotonic Delta Tracking**: Queries Xray stats with `reset=false` and never resets Xray counters. The agent tracks the last successfully reported cumulative byte cursor in memory and only reports deltas. This eliminates race-condition packet loss between query and upload, and guarantees zero traffic loss during network disconnects or retries. Automatically detects Xray daemon restarts.
-- **Zero Disk Overhead**: Runs purely in memory without writing data or state to disk.
+- **Zero-Loss Monotonic Delta Tracking**: Queries Xray stats with `reset=false` and never resets Xray counters. The agent tracks cumulative byte counters and only reports deltas confirmed by `204 No Content`. This eliminates race-condition packet loss between query and upload, and guarantees zero traffic loss during network disconnects or retries. Automatically detects Xray daemon restarts.
+- **Persistent State Tracking**: Byte cursors are persisted to `.xflow-state.json` (configurable via `STATE_FILE`) to reliably survive agent restarts and calibrate baselines on initial boot.
 - **Selective User Tracking**: If `-u` is specified, only stats for the specified user emails are queried; traffic for unlisted users is left untouched.
 
 ---
