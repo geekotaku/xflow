@@ -93,7 +93,12 @@ function formatBytes(bytes) {
   return `${(bytes / 1024 ** i).toFixed(2)} ${units[i]}`;
 }
 
-function isoDate(d) { return d.toISOString().slice(0, 10); }
+function isoDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 function resolvedLang() {
   if (currentLang !== 'auto') return currentLang;
@@ -299,44 +304,45 @@ function buildQuery() {
   const p = new URLSearchParams();
   if (userFilter.value) p.set('user', userFilter.value);
   if (nodeFilter.value) p.set('node', nodeFilter.value);
-  if (startDate.value)  p.set('start', new Date(startDate.value).toISOString());
+  if (startDate.value) {
+    const [y, m, d] = startDate.value.split('-').map(Number);
+    const start = new Date(y, m - 1, d, 0, 0, 0, 0);
+    p.set('start', start.toISOString());
+  }
   if (endDate.value) {
-    const end = new Date(endDate.value);
-    end.setUTCHours(23, 59, 59, 999);
+    const [y, m, d] = endDate.value.split('-').map(Number);
+    const end = new Date(y, m - 1, d, 23, 59, 59, 999);
     p.set('end', end.toISOString());
   }
+  p.set('tz', String(-new Date().getTimezoneOffset()));
   return p.toString();
 }
 
 // ── Chart ────────────────────────────────────────────────────────
 
 /**
- * Parse a SQLite bucket string (UTC) and format in local timezone.
- * Daily "2026-09-10"    → zh: "9月10日"       en: "Sep 10"
- * Hourly "2026-09-10T14" → zh: "9月10日 22:00" en: "Sep 10 22:00"
+ * Format a bucket string in local timezone.
+ * Daily "2026-09-10"     → zh: "9月10日"       en: "Sep 10"
+ * Hourly "2026-09-10T14" → zh: "9月10日 14:00" en: "Sep 10 14:00"
  */
 function formatBucket(bucket, hourly) {
   if (hourly) {
-    const d = new Date(bucket + ':00:00Z');
+    const [datePart, hourPart] = bucket.split('T');
+    const [y, m, d] = (datePart || '').split('-').map(Number);
+    const hh = (hourPart || '00').padStart(2, '0');
     if (resolvedLang() === 'zh') {
-      const m  = d.getMonth() + 1;
-      const dy = d.getDate();
-      const hh = String(d.getHours()).padStart(2, '0');
-      const mm = String(d.getMinutes()).padStart(2, '0');
-      return `${m}月${dy}日 ${hh}:${mm}`;
+      return `${m}月${d}日 ${hh}:00`;
     }
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit', hour12: false,
-    }).format(d);
+    const dt = new Date(y, m - 1, d);
+    const monthStr = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(dt);
+    return `${monthStr} ${d} ${hh}:00`;
   } else {
-    const d = new Date(bucket + 'T00:00:00Z');
+    const [y, m, d] = bucket.split('-').map(Number);
     if (resolvedLang() === 'zh') {
-      return `${d.getMonth() + 1}月${d.getDate()}日`;
+      return `${m}月${d}日`;
     }
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short', day: 'numeric',
-    }).format(d);
+    const dt = new Date(y, m - 1, d);
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(dt);
   }
 }
 
@@ -698,7 +704,7 @@ window.addEventListener('languagechange', () => {
   applyLang(currentLang);
 
   const today      = new Date();
-  const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
   startDate.value  = isoDate(monthStart);
   endDate.value    = isoDate(today);
 

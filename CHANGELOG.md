@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - Unreleased
+
+### 🐛 Bug Fixes
+- **Local Timezone Date Filtering**: Fixed an issue where date filter inputs (`startDate`, `endDate`) were parsed as UTC timestamps instead of browser local time, which caused records during the early hours of the selected start date to be omitted and the next day's early hours to be included in non-UTC timezones (e.g. UTC+8).
+- **Timezone-Aware Chart Bucketing**: Passed client timezone offset (`tz`) to `/api/stats` and converted UTC timestamps using SQLite's native `datetime(reported_at, tzModifier)` so daily/hourly chart buckets align with the user's local day (00:00 - 24:00) and hour instead of UTC boundaries.
+- **Local Date Picker Initialization**: Updated `isoDate()` and month-start initialization to use the browser's local calendar dates instead of UTC to avoid displaying yesterday's date in non-UTC timezones during local morning hours.
+
+### ⚙️ Container & Configuration
+- **Container Timezone Support (`tzdata`)**: Added the `tzdata` package to the Alpine runtime Docker image and added a `TZ` option in `docker-compose.yml`, enabling scheduled maintenance tasks (e.g. daily 02:00 AM database cleanup and compaction) to execute according to the configured local timezone (e.g. `TZ=Asia/Shanghai`).
+
+---
+
 ## [1.0.3] - 2026-09-11
 
 ### 🐛 Bug Fixes

@@ -16,6 +16,7 @@ RUN npm prune --omit=dev
 FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+RUN apk add --no-cache tzdata
 # Same base image/arch as the build stage, so the compiled native addon
 # is ABI-compatible — no toolchain needed here, just copy it over.
 COPY --from=build /app/node_modules ./node_modules

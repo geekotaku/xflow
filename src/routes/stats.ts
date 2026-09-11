@@ -42,15 +42,19 @@ router.get("/", (req, res) => {
   const startIso = parseDate(req.query.start, () => new Date(0).toISOString());
   const endIso = parseDate(req.query.end, () => new Date().toISOString());
 
+  // Client timezone offset in minutes (e.g. +480 for UTC+8, -300 for UTC-5). Defaults to 0 (UTC).
+  const tzOffset = Math.max(-840, Math.min(840, Number(req.query.tz) || 0));
+  const tzModifier = `${tzOffset >= 0 ? '+' : ''}${Math.round(tzOffset)} minutes`;
+
   // Determine granularity: hourly for ≤3 days, daily otherwise
   const rangeMs = Date.parse(endIso) - Date.parse(startIso);
   const hourly = rangeMs <= 3 * 24 * 3600 * 1000;
-  // SQLite substr:
+  // SQLite strftime in client local timezone:
   //   daily  → "2026-09-10"
   //   hourly → "2026-09-10T14"
   const timeBucket = hourly
-    ? `substr(reported_at, 1, 13)`
-    : `substr(reported_at, 1, 10)`;
+    ? `strftime('%Y-%m-%dT%H', datetime(reported_at, '${tzModifier}'))`
+    : `strftime('%Y-%m-%d', datetime(reported_at, '${tzModifier}'))`;
 
   const conditions: string[] = ["reported_at >= ?", "reported_at <= ?"];
   const params: unknown[] = [startIso, endIso];
