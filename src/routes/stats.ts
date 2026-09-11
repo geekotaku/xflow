@@ -42,9 +42,9 @@ router.get("/", (req, res) => {
   const startIso = parseDate(req.query.start, () => new Date(0).toISOString());
   const endIso = parseDate(req.query.end, () => new Date().toISOString());
 
-  // Determine granularity: hourly for ≤2 days, daily otherwise
+  // Determine granularity: hourly for ≤3 days, daily otherwise
   const rangeMs = Date.parse(endIso) - Date.parse(startIso);
-  const hourly = rangeMs <= 2 * 24 * 3600 * 1000;
+  const hourly = rangeMs <= 3 * 24 * 3600 * 1000;
   // SQLite substr:
   //   daily  → "2026-09-10"
   //   hourly → "2026-09-10T14"

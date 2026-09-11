@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Default Language to Auto**: Fixed initial language selection to default to 'Auto' (`auto`) instead of hardcoded English (`en`), aligning initial UI state with dynamic browser locale detection.
 - **Full-Width Chart Layout**: Removed aspect-ratio constraints so the traffic chart stretches to 100% width across the card, matching the records table width below.
 
+### 📊 Dashboard & Analytics
+- **3-Day Hourly Granularity**: Expanded hourly chart granularity to support date ranges up to 3 days (previously 2 days).
+
 ### 🌐 Sub-Store Integration
 - **Next-Month Expiration Alignment**: Adjusted the default dynamic expiration timestamp (`expire`) to the 1st of the next UTC month at 00:00:00 UTC.
 
