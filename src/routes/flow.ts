@@ -11,6 +11,16 @@ function firstOfMonthUtc(): string {
   ).toISOString();
 }
 
+// End of the current UTC month (23:59:59 UTC) in Unix seconds
+function endOfMonthUtcSeconds(): number {
+  const now = new Date();
+  return Math.floor(
+    new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59),
+    ).getTime() / 1000,
+  );
+}
+
 // No real quota exists for self-built nodes, so `total` is set to 1 TB by default
 // (high enough that clients never render a "quota exceeded" warning). Override via
 // FLOW_DEFAULT_TOTAL environment variable (in bytes) if you want it to reflect
@@ -57,12 +67,15 @@ router.get("/", (req, res) => {
   const download = row.downlink;
   const total = Math.max(DEFAULT_TOTAL_BYTES, upload + download);
 
+  const expire =
+    Number(process.env.FLOW_DEFAULT_EXPIRE) || endOfMonthUtcSeconds();
+
   // This header is the contract with Sub-Store: point a combined
   // subscription's "Traffic Info → URL" at this endpoint's URL and it reads
-  // upload/download/total straight off this response.
+  // upload/download/total/expire straight off this response.
   res.setHeader(
     "subscription-userinfo",
-    `upload=${upload}; download=${download}; total=${total}`,
+    `upload=${upload}; download=${download}; total=${total}; expire=${expire}`,
   );
   res.json({
     user: users ? users.join(",") : null,
@@ -70,6 +83,7 @@ router.get("/", (req, res) => {
     upload,
     download,
     total,
+    expire,
   });
 });
 

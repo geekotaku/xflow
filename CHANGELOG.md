@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Advanced Pagination Toolbar**: Enhanced pagination controls with page size selector (10, 15, 20, 50 / page), first/last page shortcuts (`<<` / `>>`), numeric page buttons, and direct page jumping.
 - **Table Height Stabilization**: Auto-pads placeholder rows on the last page to maintain constant table height and eliminate pagination button jumping.
 
+### 🌐 Sub-Store Integration
+- **Dynamic End-of-Month Expiration**: Added `expire` field to `/flow` endpoint (`subscription-userinfo` header & JSON) dynamically set to the last second of the current UTC month (customizable via `FLOW_DEFAULT_EXPIRE`).
+
 ### ⚙️ CI/CD & Build Optimizations
 - **Automated Release Notes**: Automatically parses version-specific changelog notes from `CHANGELOG.md` for GitHub Releases without hardcoded workflows.
 - **Docker CI Optimization**: Multi-arch Docker images are built only upon new version release tags (e.g. `v*`), avoiding unnecessary builds on regular branch pushes.
