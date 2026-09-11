@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Timezone-Aware Chart Bucketing**: Passed client timezone offset (`tz`) to `/api/stats` and converted UTC timestamps using SQLite's native `datetime(reported_at, tzModifier)` so daily/hourly chart buckets align with the user's local day (00:00 - 24:00) and hour instead of UTC boundaries.
 - **Local Date Picker Initialization**: Updated `isoDate()` and month-start initialization to use the browser's local calendar dates instead of UTC to avoid displaying yesterday's date in non-UTC timezones during local morning hours.
 
+### 📊 Dashboard & Analytics
+- **Daily-to-Hourly Chart Drill-Down**: Clicking any column in the daily traffic chart instantly drills down into that specific day's 24-hour hourly view, complete with hover cursor indicators, tooltip hints, and a dedicated "Back to Daily" return button to restore the previous date range.
+
 ### ⚙️ Container & Configuration
 - **Container Timezone Support (`tzdata`)**: Added the `tzdata` package to the Alpine runtime Docker image and added a `TZ` option in `docker-compose.yml`, enabling scheduled maintenance tasks (e.g. daily 02:00 AM database cleanup and compaction) to execute according to the configured local timezone (e.g. `TZ=Asia/Shanghai`).
 

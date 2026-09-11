@@ -35,6 +35,8 @@ const I18N = {
     viewTotal:  '总流量',
     uplink:     '上行',
     downlink:   '下行',
+    drilldownBack: '返回日视图',
+    drilldownHint: '💡 点击柱状图下钻按小时查看',
   },
   en: {
     title:      'Traffic Stats',
@@ -71,6 +73,8 @@ const I18N = {
     viewTotal:  'Total',
     uplink:     'Upload',
     downlink:   'Download',
+    drilldownBack: 'Back to Daily',
+    drilldownHint: '💡 Click bar to view hourly detail',
   },
 };
 
@@ -80,6 +84,7 @@ let currentTheme    = localStorage.getItem('xflow-theme') || 'auto';
 let currentView     = 'user'; // 'user' | 'node' | 'total'
 let cachedStatsData = null;
 let chart           = null;
+let drilldownState  = null;
 let recordsPage     = 1;
 let recordsPageSize = 10;
 let recordsTotal    = 0;
@@ -240,6 +245,7 @@ function applyLang(lang) {
   setTxt('viewBtnUser', 'viewUser');
   setTxt('viewBtnNode', 'viewNode');
   setTxt('viewBtnTotal','viewTotal');
+  setTxt('drilldownBackLabel', 'drilldownBack');
   setTxt('labelGoto',   'goto');
   setTxt('labelPageSuffix', 'pageSuffix');
 
@@ -439,6 +445,27 @@ function renderChart(data) {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
+      onClick: (event, elements, chartInstance) => {
+        if (hourly) return;
+        const pts = (elements && elements.length)
+          ? elements
+          : chartInstance.getElementsAtEventForMode(event.native, 'index', { intersect: false }, true);
+        if (!pts || !pts.length) return;
+        const idx = pts[0].index;
+        const clickedBucket = buckets[idx];
+        if (clickedBucket) {
+          drillDownToDate(clickedBucket);
+        }
+      },
+      onHover: (event, elements) => {
+        const target = event?.native?.target;
+        if (!target) return;
+        if (!hourly) {
+          target.style.cursor = (elements && elements.length) ? 'pointer' : 'default';
+        } else {
+          target.style.cursor = 'default';
+        }
+      },
       scales: {
         x: {
           stacked: true,
@@ -478,7 +505,10 @@ function renderChart(data) {
           borderWidth:     1,
           callbacks: {
             label:  ctx   => `${ctx.dataset.label}: ${formatBytes(ctx.raw)}`,
-            footer: items => `Total: ${formatBytes(items.reduce((s, i) => s + i.raw, 0))}`,
+            footer: items => {
+              const total = `Total: ${formatBytes(items.reduce((s, i) => s + i.raw, 0))}`;
+              return !hourly ? `${total}\n${t('drilldownHint')}` : total;
+            },
           },
         },
       },
@@ -487,6 +517,11 @@ function renderChart(data) {
 
   const badge = document.getElementById('granBadge');
   if (badge) badge.textContent = hourly ? t('granHour') : t('granDay');
+
+  const backBtn = document.getElementById('drilldownBackBtn');
+  if (backBtn) {
+    backBtn.style.display = drilldownState ? 'inline-flex' : 'none';
+  }
 }
 
 // ── View switch handler ──────────────────────────────────────────
@@ -655,7 +690,42 @@ async function refresh() {
   }
 }
 
-applyBtn.addEventListener('click', () => { recordsPage = 1; refresh(); });
+function drillDownToDate(dateStr) {
+  if (!drilldownState) {
+    drilldownState = {
+      startDate: startDate.value,
+      endDate: endDate.value,
+    };
+  }
+  startDate.value = dateStr;
+  endDate.value = dateStr;
+  const backBtn = document.getElementById('drilldownBackBtn');
+  if (backBtn) backBtn.style.display = 'inline-flex';
+  recordsPage = 1;
+  refresh();
+}
+
+function exitDrillDown() {
+  if (drilldownState) {
+    startDate.value = drilldownState.startDate;
+    endDate.value = drilldownState.endDate;
+    drilldownState = null;
+  }
+  const backBtn = document.getElementById('drilldownBackBtn');
+  if (backBtn) backBtn.style.display = 'none';
+  recordsPage = 1;
+  refresh();
+}
+
+document.getElementById('drilldownBackBtn')?.addEventListener('click', exitDrillDown);
+
+applyBtn.addEventListener('click', () => {
+  drilldownState = null;
+  const backBtn = document.getElementById('drilldownBackBtn');
+  if (backBtn) backBtn.style.display = 'none';
+  recordsPage = 1;
+  refresh();
+});
 
 document.getElementById('pageSizeSelect')?.addEventListener('change', e => {
   recordsPageSize = Number(e.target.value);
