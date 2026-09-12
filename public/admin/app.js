@@ -406,6 +406,16 @@ function fallbackCopy(text) {
   document.body.removeChild(ta);
 }
 
+function parseDate(str) {
+  if (!str) return null;
+  let s = String(str).trim();
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(s)) {
+    s = s.replace(' ', 'T') + 'Z';
+  }
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function renderNodes(nodes) {
   nodeTable.innerHTML = '';
   if (!nodes || nodes.length === 0) {
@@ -419,8 +429,9 @@ function renderNodes(nodes) {
 
   for (const n of nodes) {
     const tr = document.createElement('tr');
-    const reportedDate = n.last_reported_at
-      ? new Date(n.last_reported_at).toLocaleString(locale, {
+    const repDate = parseDate(n.last_reported_at);
+    const reportedDate = repDate
+      ? repDate.toLocaleString(locale, {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -429,8 +440,9 @@ function renderNodes(nodes) {
         })
       : t('neverReported');
 
-    const createdTooltip = n.created_at
-      ? new Date(n.created_at).toLocaleString(locale, {
+    const crDate = parseDate(n.created_at);
+    const createdTooltip = crDate
+      ? crDate.toLocaleString(locale, {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',

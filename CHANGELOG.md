@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Multi-Device Sessions**: Supported concurrent multi-device logins with instant global session invalidation upon logout or password change.
 - **Brute-Force Protection**: Added login rate limiting with cooldown locks after repeated failed attempts.
 
+### 📊 Dashboard & Analytics
+- **Instant Reactive Filtering**: Removed the manual 'Apply' button across all filters; switching users, nodes, dates, or presets now triggers immediate data refreshes with auto-correcting date bounds.
+- **Quick Date Presets**: Added one-click range shortcut buttons ('Today', 'Last 7 Days', 'This Month', 'Last Month') next to the date pickers with live active state synchronization.
+- **Persistent Layout on Empty Data**: Kept the chart card and records table permanently visible with centered empty state notices when no data is returned, preventing layout collapse.
+
 ### 🖥️ Admin Console & Node Management
 - **Last Reported Timestamp**: Displayed the node's latest traffic reporting timestamp in the admin table, showing 'Never' for inactive nodes and preserving creation time on hover.
 - **Node Renaming**: Supported inline node name editing with automatic cascade to historical traffic records.

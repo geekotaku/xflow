@@ -8,7 +8,6 @@ const I18N = {
     labelStart: '起始日期',
     labelEnd:   '结束日期',
     optAll:     '全部',
-    applyBtn:   '应用',
     thTime:     '时间',
     thUser:     '用户',
     thNode:     '节点',
@@ -37,6 +36,11 @@ const I18N = {
     downlink:   '下行',
     drilldownBack: '返回日视图',
     drilldownHint: '💡 点击柱状图下钻按小时查看',
+    labelPresets:    '快捷筛选',
+    presetToday:     '今日',
+    presetLast7:     '近 7 天',
+    presetThisMonth: '本月',
+    presetLastMonth: '上月',
   },
   en: {
     title:      'Node Traffic Analytics',
@@ -46,7 +50,6 @@ const I18N = {
     labelStart: 'Start Date',
     labelEnd:   'End Date',
     optAll:     'All',
-    applyBtn:   'Apply',
     thTime:     'Time',
     thUser:     'User',
     thNode:     'Node',
@@ -75,6 +78,11 @@ const I18N = {
     downlink:   'Download',
     drilldownBack: 'Back to Daily',
     drilldownHint: '💡 Click bar to view hourly detail',
+    labelPresets:    'Quick Range',
+    presetToday:     'Today',
+    presetLast7:     'Last 7 Days',
+    presetThisMonth: 'This Month',
+    presetLastMonth: 'Last Month',
   },
 };
 
@@ -233,7 +241,6 @@ function applyLang(lang) {
   setTxt('labelEnd',    'labelEnd');
   setTxt('optAllUser',  'optAll');
   setTxt('optAllNode',  'optAll');
-  setTxt('applyBtn',    'applyBtn');
   setTxt('thId',        'thId');
   setTxt('thTime',      'thTime');
   setTxt('thUser',      'thUser');
@@ -242,12 +249,20 @@ function applyLang(lang) {
   setTxt('thDown',      'thDown');
   setTxt('thTotal',     'thTotal');
   setTxt('emptyState',  'empty');
+  setTxt('chartEmpty',  'empty');
+  const emptyTd = document.querySelector('#userTable tbody tr td[colspan="7"]');
+  if (emptyTd) emptyTd.textContent = t('empty');
   setTxt('viewBtnUser', 'viewUser');
   setTxt('viewBtnNode', 'viewNode');
   setTxt('viewBtnTotal','viewTotal');
   setTxt('drilldownBackLabel', 'drilldownBack');
   setTxt('labelGoto',   'goto');
   setTxt('labelPageSuffix', 'pageSuffix');
+  setTxt('labelPresets',    'labelPresets');
+  setTxt('presetToday',     'presetToday');
+  setTxt('presetLast7',     'presetLast7');
+  setTxt('presetThisMonth', 'presetThisMonth');
+  setTxt('presetLastMonth', 'presetLastMonth');
 
   const pageSizeSel = document.getElementById('pageSizeSelect');
   if (pageSizeSel) {
@@ -287,7 +302,6 @@ const userFilter = document.getElementById('userFilter');
 const nodeFilter = document.getElementById('nodeFilter');
 const startDate  = document.getElementById('startDate');
 const endDate    = document.getElementById('endDate');
-const applyBtn   = document.getElementById('applyBtn');
 const emptyState = document.getElementById('emptyState');
 
 async function loadMeta() {
@@ -601,21 +615,27 @@ async function loadRecords(page = 1) {
   const tbody = document.querySelector('#userTable tbody');
   tbody.innerHTML = '';
 
-  let idx = 0;
-  for (const row of data.records) {
+  if (!data.records || data.records.length === 0) {
     const tr = document.createElement('tr');
-    const total = row.uplink + row.downlink;
-    const rowNum = (data.page - 1) * recordsPageSize + idx + 1;
-    tr.innerHTML =
-      `<td>${rowNum}</td>` +
-      `<td>${formatTimestamp(row.reported_at)}</td>` +
-      `<td>${row.user}</td>` +
-      `<td>${row.node}</td>` +
-      `<td>${formatBytes(row.uplink)}</td>` +
-      `<td>${formatBytes(row.downlink)}</td>` +
-      `<td><strong>${formatBytes(total)}</strong></td>`;
+    tr.innerHTML = `<td colspan="7" style="text-align: center; color: var(--text-muted); padding: 36px 16px;">${t('empty')}</td>`;
     tbody.appendChild(tr);
-    idx++;
+  } else {
+    let idx = 0;
+    for (const row of data.records) {
+      const tr = document.createElement('tr');
+      const total = row.uplink + row.downlink;
+      const rowNum = (data.page - 1) * recordsPageSize + idx + 1;
+      tr.innerHTML =
+        `<td>${rowNum}</td>` +
+        `<td>${formatTimestamp(row.reported_at)}</td>` +
+        `<td>${row.user}</td>` +
+        `<td>${row.node}</td>` +
+        `<td>${formatBytes(row.uplink)}</td>` +
+        `<td>${formatBytes(row.downlink)}</td>` +
+        `<td><strong>${formatBytes(total)}</strong></td>`;
+      tbody.appendChild(tr);
+      idx++;
+    }
   }
 
   // Pad empty placeholder rows so table height stays constant across pages (avoids pagination button jumping)
@@ -669,26 +689,119 @@ async function refresh() {
     || (data.byTimeUser && data.byTimeUser.length > 0)
     || (data.byUser && data.byUser.length > 0);
 
-  document.getElementById('chartCard').style.display = hasData ? '' : 'none';
-  document.getElementById('tableCard').style.display = hasData ? '' : 'none';
-  emptyState.style.display = hasData ? 'none' : '';
-
-  if (hasData) {
-    // Smart view adjustment: if user specifically filtered a single user, default view to 'node'
-    if (userFilter.value && currentView === 'user') {
-      currentView = 'node';
-      document.querySelectorAll('.view-btn').forEach(b =>
-        b.classList.toggle('active', b.dataset.view === 'node'));
-    } else if (nodeFilter.value && currentView === 'node') {
-      currentView = 'user';
-      document.querySelectorAll('.view-btn').forEach(b =>
-        b.classList.toggle('active', b.dataset.view === 'user'));
-    }
-
-    renderChart(data);
-    await loadRecords(1);
+  const chartEmpty = document.getElementById('chartEmpty');
+  if (chartEmpty) {
+    chartEmpty.textContent = t('empty');
+    chartEmpty.style.display = hasData ? 'none' : 'flex';
   }
+
+  // Smart view adjustment: if user specifically filtered a single user, default view to 'node'
+  if (userFilter.value && currentView === 'user') {
+    currentView = 'node';
+    document.querySelectorAll('.view-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.view === 'node'));
+  } else if (nodeFilter.value && currentView === 'node') {
+    currentView = 'user';
+    document.querySelectorAll('.view-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.view === 'user'));
+  }
+
+  renderChart(data);
+  await loadRecords(1);
 }
+
+function updatePresetActiveState() {
+  const s = startDate.value;
+  const e = endDate.value;
+  const now = new Date();
+
+  const todayStr = isoDate(now);
+  const last7StartStr = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
+  const monthStartStr = isoDate(new Date(now.getFullYear(), now.getMonth(), 1));
+  const lastMonthStartStr = isoDate(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+  const lastMonthEndStr = isoDate(new Date(now.getFullYear(), now.getMonth(), 0));
+
+  let matched = null;
+  if (s === todayStr && e === todayStr) {
+    matched = 'today';
+  } else if (s === last7StartStr && e === todayStr) {
+    matched = 'last7';
+  } else if (s === monthStartStr && e === todayStr) {
+    matched = 'thisMonth';
+  } else if (s === lastMonthStartStr && e === lastMonthEndStr) {
+    matched = 'lastMonth';
+  }
+
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.preset === matched);
+  });
+}
+
+function applyPreset(presetKey) {
+  const now = new Date();
+  if (presetKey === 'today') {
+    startDate.value = isoDate(now);
+    endDate.value = isoDate(now);
+  } else if (presetKey === 'last7') {
+    startDate.value = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
+    endDate.value = isoDate(now);
+  } else if (presetKey === 'thisMonth') {
+    startDate.value = isoDate(new Date(now.getFullYear(), now.getMonth(), 1));
+    endDate.value = isoDate(now);
+  } else if (presetKey === 'lastMonth') {
+    startDate.value = isoDate(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+    endDate.value = isoDate(new Date(now.getFullYear(), now.getMonth(), 0));
+  }
+
+  updatePresetActiveState();
+
+  drilldownState = null;
+  const backBtn = document.getElementById('drilldownBackBtn');
+  if (backBtn) backBtn.style.display = 'none';
+  recordsPage = 1;
+  refresh();
+}
+
+document.getElementById('datePresets')?.addEventListener('click', e => {
+  const btn = e.target.closest('.preset-btn');
+  if (btn && btn.dataset.preset) {
+    applyPreset(btn.dataset.preset);
+  }
+});
+
+userFilter.addEventListener('change', () => {
+  recordsPage = 1;
+  refresh();
+});
+
+nodeFilter.addEventListener('change', () => {
+  recordsPage = 1;
+  refresh();
+});
+
+startDate.addEventListener('change', () => {
+  if (startDate.value && endDate.value && startDate.value > endDate.value) {
+    endDate.value = startDate.value;
+  }
+  drilldownState = null;
+  const backBtn = document.getElementById('drilldownBackBtn');
+  if (backBtn) backBtn.style.display = 'none';
+  recordsPage = 1;
+  updatePresetActiveState();
+  refresh();
+});
+
+endDate.addEventListener('change', () => {
+  if (startDate.value && endDate.value && endDate.value < startDate.value) {
+    startDate.value = endDate.value;
+  }
+  drilldownState = null;
+  const backBtn = document.getElementById('drilldownBackBtn');
+  if (backBtn) backBtn.style.display = 'none';
+  recordsPage = 1;
+  updatePresetActiveState();
+  refresh();
+});
 
 function drillDownToDate(dateStr) {
   if (!drilldownState) {
@@ -702,6 +815,7 @@ function drillDownToDate(dateStr) {
   const backBtn = document.getElementById('drilldownBackBtn');
   if (backBtn) backBtn.style.display = 'inline-flex';
   recordsPage = 1;
+  updatePresetActiveState();
   refresh();
 }
 
@@ -714,18 +828,11 @@ function exitDrillDown() {
   const backBtn = document.getElementById('drilldownBackBtn');
   if (backBtn) backBtn.style.display = 'none';
   recordsPage = 1;
+  updatePresetActiveState();
   refresh();
 }
 
 document.getElementById('drilldownBackBtn')?.addEventListener('click', exitDrillDown);
-
-applyBtn.addEventListener('click', () => {
-  drilldownState = null;
-  const backBtn = document.getElementById('drilldownBackBtn');
-  if (backBtn) backBtn.style.display = 'none';
-  recordsPage = 1;
-  refresh();
-});
 
 document.getElementById('pageSizeSelect')?.addEventListener('change', e => {
   recordsPageSize = Number(e.target.value);
@@ -777,6 +884,7 @@ window.addEventListener('languagechange', () => {
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
   startDate.value  = isoDate(monthStart);
   endDate.value    = isoDate(today);
+  updatePresetActiveState();
 
   await loadMeta();
   await refresh();

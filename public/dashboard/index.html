@@ -27,6 +27,7 @@
     --select-bg: #ffffff;
     --select-border: #d0d4df;
     --input-bg: #ffffff;
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none' stroke='%236b7080' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
   }
 
   [data-theme="dark"] {
@@ -42,6 +43,7 @@
     --select-bg: #242736;
     --select-border: #3a3f5c;
     --input-bg: #242736;
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none' stroke='%238b90a8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
   }
 
   /* Auto = follow OS preference */
@@ -59,6 +61,7 @@
       --select-bg: #242736;
       --select-border: #3a3f5c;
       --input-bg: #242736;
+      --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none' stroke='%238b90a8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
     }
   }
 
@@ -248,7 +251,6 @@
 
   /* FIX: explicit bg + color so dark mode dropdown looks correct */
   select, input[type="date"] {
-    padding: 7px 10px;
     font-size: 13px;
     font-family: var(--font);
     border-radius: var(--radius-sm);
@@ -257,18 +259,32 @@
     color: var(--text);
     outline: none;
     transition: border-color .18s, box-shadow .18s;
+  }
+
+  input[type="date"] {
+    padding: 7px 10px;
     appearance: auto;
     -webkit-appearance: auto;
     color-scheme: light;
   }
 
   /* Force browser native calendar popup into dark mode */
-  [data-theme="dark"] select,
   [data-theme="dark"] input[type="date"] { color-scheme: dark; }
 
   @media (prefers-color-scheme: dark) {
-    [data-theme="auto"] select,
     [data-theme="auto"] input[type="date"] { color-scheme: dark; }
+  }
+
+  select {
+    padding: 7px 28px 7px 10px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: var(--select-arrow);
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 10px 6px;
+    cursor: pointer;
   }
 
   select:focus, input[type="date"]:focus {
@@ -276,27 +292,60 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
   }
 
-  .apply-btn {
-    padding: 7px 18px;
-    font-family: var(--font);
-    font-size: 13px;
-    font-weight: 500;
+  /* ── Date Presets ───────────────────────────────────────────── */
+  .date-presets {
+    display: inline-flex;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    border: none;
-    background: var(--accent);
-    color: #fff;
-    cursor: pointer;
-    transition: background .18s, transform .1s;
+    padding: 3px;
+    gap: 2px;
+    height: 33px;
+    box-sizing: border-box;
+    align-items: center;
   }
-
-  .apply-btn:hover { background: var(--accent-hover); }
-  .apply-btn:active { transform: scale(.97); }
+  .preset-btn {
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+    height: 100%;
+    display: inline-flex;
+    align-items: center;
+  }
+  .preset-btn:hover {
+    color: var(--text);
+  }
+  .preset-btn.active {
+    background: var(--surface);
+    color: var(--accent);
+    box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    font-weight: 600;
+  }
 
   /* ── Chart ──────────────────────────────────────────────────── */
   .chart-wrap {
     position: relative;
     width: 100%;
     height: 320px;
+  }
+
+  .chart-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 13.5px;
+    pointer-events: none;
   }
 
   /* ── Table ──────────────────────────────────────────────────── */
@@ -362,7 +411,7 @@
   }
 
   .pag-select {
-    padding: 4px 8px;
+    padding: 4px 22px 4px 8px;
     font-size: 12px;
     font-family: var(--font);
     border-radius: var(--radius-sm);
@@ -372,6 +421,13 @@
     cursor: pointer;
     outline: none;
     transition: border-color .15s;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: var(--select-arrow);
+    background-repeat: no-repeat;
+    background-position: right 7px center;
+    background-size: 8px 5px;
   }
   .pag-select:focus { border-color: var(--accent); }
 
@@ -610,17 +666,32 @@
       min-width: 0;
       width: 100%;
     }
-    .field select, .field input[type="date"] {
+    .field input[type="date"] {
       width: 100%;
       padding: 8px 6px;
       font-size: 13px;
     }
-    .apply-btn {
+    .field select {
+      width: 100%;
+      padding: 8px 24px 8px 8px;
+      font-size: 13px;
+    }
+    .date-presets-field {
       grid-column: 1 / -1;
       width: 100%;
-      padding: 9px;
-      font-size: 14px;
-      margin-top: 2px;
+    }
+    .date-presets {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      height: auto;
+      padding: 3px;
+      gap: 3px;
+    }
+    .preset-btn {
+      justify-content: center;
+      padding: 7px 2px;
+      font-size: 11.5px;
     }
     .chart-wrap {
       height: 240px;
@@ -740,7 +811,15 @@
         <label for="endDate" id="labelEnd">End Date</label>
         <input type="date" id="endDate" />
       </div>
-      <button class="apply-btn" id="applyBtn">Apply</button>
+      <div class="field date-presets-field">
+        <label id="labelPresets">Quick Range</label>
+        <div class="date-presets" id="datePresets">
+          <button type="button" class="preset-btn" data-preset="today" id="presetToday">Today</button>
+          <button type="button" class="preset-btn" data-preset="last7" id="presetLast7">Last 7 Days</button>
+          <button type="button" class="preset-btn active" data-preset="thisMonth" id="presetThisMonth">This Month</button>
+          <button type="button" class="preset-btn" data-preset="lastMonth" id="presetLastMonth">Last Month</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -765,6 +844,7 @@
     </div>
     <div class="chart-wrap">
       <canvas id="trafficChart"></canvas>
+      <div id="chartEmpty" class="chart-empty" style="display: none;">No data in selected range</div>
     </div>
   </div>
 
@@ -786,7 +866,6 @@
         <tbody></tbody>
       </table>
     </div>
-    <div id="emptyState" class="empty" style="display:none">No data in selected range</div>
     <div class="pagination-bar" id="paginationBar">
       <div class="pag-left">
         <select id="pageSizeSelect" class="pag-select" aria-label="Page size">
