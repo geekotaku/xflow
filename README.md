@@ -123,6 +123,37 @@ The server will start on `http://localhost:3000`.
 
 ---
 
+## Agent Node Deployment (`xflow-agent`)
+
+On each self-built Xray proxy node, run the ultra-fast one-line installer (native systemd service, ~5s deploy, ~30MB RAM footprint):
+
+```bash
+# Recommended one-line installer (replace with your server URL & node token):
+sudo bash <(curl -fsSL https://raw.githubusercontent.com/geekotaku/xflow/main/install-agent.sh) \
+  -s https://xflow.example.com \
+  -t <YOUR_NODE_TOKEN>
+
+# Or download directly from your own xflow server (no GitHub dependency):
+sudo bash <(curl -fsSL https://xflow.example.com/install-agent.sh) \
+  -s https://xflow.example.com \
+  -t <YOUR_NODE_TOKEN>
+```
+
+> **Tip**: After creating a node in the Admin Panel (`/admin`), simply click the **"Install Cmd"** button in the node table to copy the ready-to-run command!
+
+Useful management commands:
+```bash
+systemctl status xflow-agent          # Check service status
+journalctl -u xflow-agent -f          # View live reporting logs
+systemctl restart xflow-agent         # Restart agent service
+nano /opt/xflow-agent/xflow-agent.env # Edit agent configuration
+sudo bash /opt/xflow-agent/install-agent.sh --uninstall # Clean uninstall
+```
+
+For advanced options, custom parameters, and Docker setups, see [agent/README.md](./agent/README.md).
+
+---
+
 ## Sub-Store Integration (`/flow`)
 
 Use this endpoint to provide traffic usage directly to Sub-Store:

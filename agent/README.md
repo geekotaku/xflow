@@ -67,23 +67,38 @@ Visit the `xflow` admin panel (`https://xflow.example.com/admin`) and create a n
 
 ### 3. Run the Agent
 
-#### Option A: One-Click Installation Script (Recommended for Linux VPS)
+#### Option A: One-Click systemd Installer (Recommended for Linux VPS — ~5s Deploy)
 
-Run the installer on your Xray proxy node:
+Run the one-line installer directly on your Xray proxy node:
 
 ```bash
-# Interactive mode (prompts for endpoint URL, token, node name, etc.)
-sudo bash <(curl -fsSL https://raw.githubusercontent.com/geekotaku/xflow/main/agent/install.sh)
+# Recommended: One-line setup (auto-detects/installs Node.js, configures systemd & starts immediately)
+sudo bash <(curl -fsSL https://raw.githubusercontent.com/geekotaku/xflow/main/install-agent.sh) \
+  -s https://xflow.example.com \
+  -t your_node_token
+
+# Or download directly from your own xflow server (bypassing GitHub / GFW):
+sudo bash <(curl -fsSL https://xflow.example.com/install-agent.sh) \
+  -s https://xflow.example.com \
+  -t your_node_token
+
+# Custom options (node name, interval, API address, user whitelist):
+sudo bash <(curl -fsSL https://raw.githubusercontent.com/geekotaku/xflow/main/install-agent.sh) \
+  -s https://xflow.example.com \
+  -t your_node_token \
+  -n hk-node-01 \
+  -i 15 \
+  -a 127.0.0.1:10085 \
+  -u user1@domain,user2@domain
 ```
 
-Or run non-interactively with arguments:
-
+**Management commands:**
 ```bash
-sudo bash <(curl -fsSL https://raw.githubusercontent.com/geekotaku/xflow/main/agent/install.sh) \
-  -e https://xflow.example.com \
-  -t your_node_token \
-  -i 15 \
-  --node hk-node-01
+systemctl status xflow-agent       # View status
+journalctl -u xflow-agent -f       # Follow live reporting logs
+systemctl restart xflow-agent      # Restart agent
+nano /opt/xflow-agent/xflow-agent.env # Edit configuration
+sudo bash /opt/xflow-agent/install-agent.sh --uninstall # Clean uninstall
 ```
 
 ---

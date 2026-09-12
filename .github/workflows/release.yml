@@ -46,9 +46,11 @@ jobs:
             docker-compose.yml \
             Dockerfile \
             install.sh \
+            install-agent.sh \
             CHANGELOG.md \
             README.md \
             LICENSE
+          cp "xflow-${VERSION}.tar.gz" "xflow-latest.tar.gz"
 
       # 2. Build & Package xflow-agent
       - name: Build & Package xflow-agent
@@ -65,8 +67,9 @@ jobs:
             package-lock.json \
             docker-compose.yml \
             Dockerfile \
-            install.sh \
+            install-agent.sh \
             README.md
+          cp "../xflow-agent-${VERSION}.tar.gz" "../xflow-agent-latest.tar.gz"
 
       # 3. Generate Release Notes from CHANGELOG.md
       - name: Generate Release Body from CHANGELOG.md
@@ -86,4 +89,6 @@ jobs:
           body_path: RELEASE_BODY.md
           files: |
             xflow-${{ steps.version.outputs.version }}.tar.gz
+            xflow-latest.tar.gz
             xflow-agent-${{ steps.version.outputs.version }}.tar.gz
+            xflow-agent-latest.tar.gz

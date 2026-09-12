@@ -123,6 +123,37 @@ npm start
 
 ---
 
+## 节点端一键部署 (`xflow-agent`)
+
+在每一台运行 Xray 的自建代理节点上，运行极简一键安装脚本（原生 systemd 架构，约 5 秒启动接入，内存开销仅约 30MB）：
+
+```bash
+# 极简一键部署（请替换服务端地址与节点 Token）
+sudo bash <(curl -fsSL https://raw.githubusercontent.com/geekotaku/xflow/main/install-agent.sh) \
+  -s https://xflow.example.com \
+  -t <YOUR_NODE_TOKEN>
+
+# 或者直接从您的 xflow 服务端下载安装（直连极速，国内 VPS 无需访问 GitHub）：
+sudo bash <(curl -fsSL https://xflow.example.com/install-agent.sh) \
+  -s https://xflow.example.com \
+  -t <YOUR_NODE_TOKEN>
+```
+
+> **提示**：登录管理员面板 (`/admin`) 创建节点后，直接点击节点列表操作栏的 **「一键部署指令」** 即可一键复制完整就绪命令！
+
+常用服务管理命令：
+```bash
+systemctl status xflow-agent          # 查看运行状态
+journalctl -u xflow-agent -f          # 查看实时上报日志
+systemctl restart xflow-agent         # 重启节点 Agent
+nano /opt/xflow-agent/xflow-agent.env # 修改节点配置
+sudo bash /opt/xflow-agent/install-agent.sh --uninstall # 一键卸载
+```
+
+详细节点端配置与参数说明请参阅 [agent/README.md](./agent/README.md)。
+
+---
+
 ## Sub-Store 集成 (`/flow`)
 
 通过此接口可将用户流量直接喂给 Sub-Store：

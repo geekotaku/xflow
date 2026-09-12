@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Node Renaming**: Supported inline node name editing with automatic cascade to historical traffic records.
 - **Bilingual i18n & Theme Sync**: Added English and Chinese language switching and synchronized theme inheritance with the dashboard.
 
+### 🚀 Deployment & Automation
+- **5-Second Agent One-Click Installer (`install-agent.sh`)**: Introduced a dedicated lightweight installer for `xflow-agent` that automatically detects/installs Node.js (>=18), configures a native `systemd` service (`xflow-agent.service`), creates secure environment configuration (`/opt/xflow-agent/xflow-agent.env`), and starts reporting in ~5 seconds with only ~30MB memory footprint (avoiding heavy Docker builds on proxy VPS nodes).
+- **Direct Server Script Serving**: Served `/install-agent.sh` and `/install.sh` directly from the xflow server, allowing mainland China or private servers to install without relying on `raw.githubusercontent.com`.
+- **One-Click Install Command in Admin Console**: Added an "Install Cmd" action button in the admin node table that copies a ready-to-run 1-line installation command pre-filled with the current server URL, node token, and node name.
+- **Agent CLI & Environment Enhancement**: Added `-s, --server <url>` option alias in `xflow-agent` alongside fallback support for `XFLOW_SERVER`, `XFLOW_TOKEN`, `XFLOW_NODE`, `XFLOW_INTERVAL`, `XFLOW_API`, and `XFLOW_USERS`.
+- **Server Installer Optimization (`install.sh`)**: Added support for non-interactive CLI flags (`-p`, `-q`, `-r`, `-a`, `-u`, `-t`, `--uninstall`, `-h`), host timezone auto-detection (`TZ`), and image pull pre-checks before building.
+
 ---
 
 ## [1.0.4] - 2026-09-11

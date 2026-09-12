@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { RETENTION_DAYS } from "./services/db"; // ensures schema exists and cleanup job starts
 import reportRouter from "./routes/report";
 import statsRouter from "./routes/stats";
@@ -27,6 +28,25 @@ app.use("/api/admin/auth", authRouter);
 // Protect all remaining /api/admin/* endpoints
 app.use("/api/admin", requireAdminAuth);
 app.use("/api/admin/nodes", nodesRouter);
+
+// Direct download routes for installation scripts
+app.get("/install-agent.sh", (_req, res) => {
+  const filePath = path.join(__dirname, "..", "install-agent.sh");
+  if (fs.existsSync(filePath)) {
+    res.type("text/plain; charset=utf-8").sendFile(filePath);
+  } else {
+    res.status(404).send("File not found");
+  }
+});
+
+app.get("/install.sh", (_req, res) => {
+  const filePath = path.join(__dirname, "..", "install.sh");
+  if (fs.existsSync(filePath)) {
+    res.type("text/plain; charset=utf-8").sendFile(filePath);
+  } else {
+    res.status(404).send("File not found");
+  }
+});
 
 // Static Web UIs
 app.use(

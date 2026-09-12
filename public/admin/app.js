@@ -48,6 +48,7 @@ const I18N = {
     tooltipCreatedAt: '创建于',
     thActions: '操作',
     emptyNodes: '暂无节点，请在上方输入节点名称并创建。',
+    btnInstallCmd: '一键部署指令',
     btnCopyToken: '复制',
     btnEditNode: '编辑',
     btnRotateToken: '重置',
@@ -69,6 +70,7 @@ const I18N = {
 
     // Toasts & Dialogs
     copied: 'Token 已复制到剪贴板',
+    cmdCopied: '一键部署指令已复制到剪贴板',
     copyFailed: '复制失败，请手动选择复制',
     confirmRotate: '确定要为该节点重新生成 Token 吗？旧 Token 将立即失效。',
     tokenRotated: 'Token 已成功重新生成',
@@ -138,6 +140,7 @@ const I18N = {
     tooltipCreatedAt: 'Created at',
     thActions: 'Actions',
     emptyNodes: 'No nodes configured yet. Enter a name above to create one.',
+    btnInstallCmd: 'Install Cmd',
     btnCopyToken: 'Copy',
     btnEditNode: 'Edit',
     btnRotateToken: 'Rotate',
@@ -159,6 +162,7 @@ const I18N = {
 
     // Toasts & Dialogs
     copied: 'Token copied to clipboard',
+    cmdCopied: 'Install command copied to clipboard',
     copyFailed: 'Copy failed, please copy manually',
     confirmRotate: 'Are you sure you want to regenerate the token for this node? The old token will be immediately revoked.',
     tokenRotated: 'Token regenerated successfully',
@@ -379,18 +383,28 @@ async function checkAuth() {
 }
 
 // ── Nodes List & Actions ─────────────────────────────────────────
-function copyToken(token) {
+function copyText(text, successMsg) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(token).then(
-      () => showToast(t('copied')),
-      () => fallbackCopy(token)
+    navigator.clipboard.writeText(text).then(
+      () => showToast(successMsg || t('copied')),
+      () => fallbackCopy(text, successMsg)
     );
   } else {
-    fallbackCopy(token);
+    fallbackCopy(text, successMsg);
   }
 }
 
-function fallbackCopy(text) {
+function copyToken(token) {
+  copyText(token, t('copied'));
+}
+
+function copyInstallCmd(token, nodeName) {
+  const origin = window.location.origin;
+  const cmd = `sudo bash <(curl -fsSL ${origin}/install-agent.sh) -s ${origin} -t ${token} -n "${nodeName}"`;
+  copyText(cmd, t('cmdCopied'));
+}
+
+function fallbackCopy(text, successMsg) {
   const ta = document.createElement('textarea');
   ta.value = text;
   ta.style.position = 'fixed';
@@ -399,7 +413,7 @@ function fallbackCopy(text) {
   ta.select();
   try {
     document.execCommand('copy');
-    showToast(t('copied'));
+    showToast(successMsg || t('copied'));
   } catch {
     showToast(t('copyFailed'));
   }
@@ -463,6 +477,7 @@ function renderNodes(nodes) {
       <td style="color: var(--text-muted);">${reportedHtml}</td>
       <td>
         <div class="actions">
+          <button class="action-btn" data-action="cmd" data-token="${escapeHtml(n.token)}" data-name="${escapeHtml(n.name)}" title="${escapeHtml(t('btnInstallCmd'))}">${t('btnInstallCmd')}</button>
           <button class="action-btn" data-action="copy" data-token="${escapeHtml(n.token)}">${t('btnCopyToken')}</button>
           <button class="action-btn" data-action="edit" data-id="${n.id}" data-name="${escapeHtml(n.name)}">${t('btnEditNode')}</button>
           <button class="action-btn" data-action="rotate" data-id="${n.id}">${t('btnRotateToken')}</button>
@@ -530,7 +545,9 @@ nodeTable.addEventListener('click', async (e) => {
   if (!btn) return;
   const action = btn.dataset.action;
 
-  if (action === 'copy') {
+  if (action === 'cmd') {
+    copyInstallCmd(btn.dataset.token, btn.dataset.name);
+  } else if (action === 'copy') {
     copyToken(btn.dataset.token);
   } else if (action === 'edit') {
     editNodeId.value = btn.dataset.id;

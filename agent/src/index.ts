@@ -61,16 +61,19 @@ function parseArgs(argv: string[]): Config {
   const program = new Command();
   program
     .name("xflow-agent")
-    .requiredOption(
-      "-e, --endpoint <url>",
-      "xflow-collector endpoint, e.g. https://data.example.com",
+    .option(
+      "-s, --server <url>",
+      "xflow server URL (alias for -e, --endpoint)",
     )
-    .requiredOption("-t, --token <token>", "auth token for this node")
+    .option(
+      "-e, --endpoint <url>",
+      "xflow-collector endpoint URL, e.g. https://data.example.com",
+    )
+    .option("-t, --token <token>", "auth token for this node")
     .option(
       "-i, --interval <minutes>",
       "collection interval in minutes",
       parsePositiveInt,
-      15,
     )
     .option(
       "-u, --users <list>",
@@ -78,18 +81,66 @@ function parseArgs(argv: string[]): Config {
       parseUserList,
     )
     .option(
-      "--node <name>",
+      "-n, --node <name>",
       "node name reported to the collector",
-      os.hostname(),
     )
     .option(
-      "--api <host:port>",
+      "-a, --api <host:port>",
       "xray gRPC API server address",
-      "127.0.0.1:10085",
     )
     .parse(argv);
 
-  return program.opts<Config>();
+  const opts = program.opts<{
+    server?: string;
+    endpoint?: string;
+    token?: string;
+    interval?: number;
+    users?: string[];
+    node?: string;
+    api?: string;
+  }>();
+
+  const endpoint =
+    opts.server ||
+    opts.endpoint ||
+    process.env.XFLOW_SERVER ||
+    process.env.XFLOW_ENDPOINT;
+
+  const token = opts.token || process.env.XFLOW_TOKEN;
+
+  const interval =
+    opts.interval ||
+    (process.env.XFLOW_INTERVAL ? parsePositiveInt(process.env.XFLOW_INTERVAL) : 15);
+
+  const node = opts.node || process.env.XFLOW_NODE || os.hostname();
+
+  const api = opts.api || process.env.XFLOW_API || "127.0.0.1:10085";
+
+  const users =
+    opts.users ||
+    (process.env.XFLOW_USERS ? parseUserList(process.env.XFLOW_USERS) : undefined);
+
+  if (!endpoint) {
+    console.error(
+      "error: required option '-s, --server <url>' (or '-e, --endpoint <url>') not specified (or set XFLOW_SERVER env)",
+    );
+    process.exit(1);
+  }
+  if (!token) {
+    console.error(
+      "error: required option '-t, --token <token>' not specified (or set XFLOW_TOKEN env)",
+    );
+    process.exit(1);
+  }
+
+  return {
+    endpoint,
+    token,
+    interval,
+    users,
+    node,
+    api,
+  };
 }
 
 // Path to persistent state file
