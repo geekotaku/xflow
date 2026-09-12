@@ -79,6 +79,8 @@ services:
     environment:
       PORT: "3000"
       DB_PATH: /data/xflow.db
+      # ADMIN_PASSWORD: ""                   # optional, sets or resets admin password (can be commented out after setup)
+      # ADMIN_USERNAME: "admin"              # optional, admin username (defaults to admin)
       # TZ: "Asia/Shanghai"                   # optional, container timezone for daily maintenance tasks
       # FLOW_DEFAULT_TOTAL: "1099511627776"  # optional, default quota in bytes (1 TB)
       # RETENTION_DAYS: "90"                  # optional, purge records older than N days (0 to disable)
@@ -228,12 +230,11 @@ Content-Type: application/json
 
 Visit `http://localhost:3000/admin` in your browser to manage node tokens:
 
-- **Create Node**: Assign a unique name to generate an authentication token.
-- **Copy Token**: One-click token copying for agent setup.
-- **Rotate Token**: Immediately revokes the old token and generates a new one.
-- **Delete Node**: Removes the node credentials (historical traffic records are preserved).
-
-> **Security Note**: The `/admin` path does not include built-in login authentication. If exposing `xflow` to the public internet, place `/admin` behind reverse-proxy authentication (e.g. Nginx HTTP Basic Auth or Cloudflare Access).
+- **Initial Setup Wizard**: On your first visit, a setup wizard guides you to create the initial administrator username and password.
+- **Password Protection & Session Auth**: All node management endpoints (`/api/admin/nodes*`) and admin operations are securely protected with HttpOnly session cookies.
+- **Node & Token Operations**: Create nodes, copy tokens with one click, rotate credentials, or delete nodes.
+- **Profile & Password Management**: Click "Change Password" in the admin header to modify your username or password anytime.
+- **Emergency Password Reset**: If you forget your password, simply add or uncomment `ADMIN_PASSWORD: "new_password"` in `docker-compose.yml` and run `docker compose up -d`. The password will automatically reset on restart.
 
 ---
 
@@ -258,6 +259,8 @@ Visit `http://localhost:3000/` or `http://localhost:3000/dashboard/` to view tra
 | ------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`                    | `3000`                 | HTTP port the server listens on                                                                                                                                         |
 | `DB_PATH`                 | `data/xflow.db`        | Path to the SQLite database file                                                                                                                                        |
+| `ADMIN_PASSWORD`          | `""`                   | Optional, automatically sets or overrides the admin password on startup (great for initial provisioning or emergency password reset)                                   |
+| `ADMIN_USERNAME`          | `admin`                | Optional, admin username when paired with `ADMIN_PASSWORD`                                                                                                               |
 | `FLOW_DEFAULT_TOTAL`      | `1099511627776` (1 TB) | Default total bytes reported in the `/flow` endpoint                                                                                                                    |
 | `FLOW_DEFAULT_EXPIRE`     | `0` (dynamic)          | Custom expiration timestamp (Unix seconds) for `/flow`. When `0` or unset, dynamically sets to the 1st of the next UTC month                                            |
 | `PROFILE_UPDATE_INTERVAL` | `24` (hours)           | Auto-update interval in hours for `/flow` headers. _(Note: When using Sub-Store, configure this directly within Sub-Store's subscription settings)_                     |

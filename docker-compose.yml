@@ -7,6 +7,8 @@ services:
     environment:
       PORT: "3000"
       DB_PATH: /data/xflow.db
+      # ADMIN_PASSWORD: ""                   # optional, sets or resets admin password (can be commented out after setup)
+      # ADMIN_USERNAME: "admin"              # optional, admin username (defaults to admin)
       # TZ: "Asia/Shanghai"                   # optional, container timezone (only used by scheduled tasks, e.g. daily 02:00 AM DB maintenance)
       # FLOW_DEFAULT_TOTAL: "1099511627776"  # optional, bytes, defaults to 1TB
       # RETENTION_DAYS: "90"                  # optional, defaults to 90 days (3 months), 0 to disable

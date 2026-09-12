@@ -5,6 +5,15 @@ export interface NodeRow {
   created_at: string;
 }
 
+export interface AdminUserRow {
+  id: number;
+  username: string;
+  password_hash: string;
+  salt: string;
+  session_secret: string;
+  updated_at: string;
+}
+
 export interface TrafficReportRow {
   id: number;
   node: string;

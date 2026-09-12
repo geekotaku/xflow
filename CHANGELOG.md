@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### 🔐 Authentication & Security
+- **Admin Authentication**: Added password protection to the admin console with initial setup wizard, case-insensitive login, and `ADMIN_PASSWORD` / `ADMIN_USERNAME` credential sync.
+- **Multi-Device Sessions**: Supported concurrent multi-device logins with instant global session invalidation upon logout or password change.
+- **Brute-Force Protection**: Added login rate limiting with cooldown locks after repeated failed attempts.
+
+### 🖥️ Admin Console & Node Management
+- **Node Renaming**: Supported inline node name editing with automatic cascade to historical traffic records.
+- **Bilingual i18n & Theme Sync**: Added English and Chinese language switching and synchronized theme inheritance with the dashboard.
+
+---
+
 ## [1.0.4] - 2026-09-11
 
 ### 🐛 Bug Fixes

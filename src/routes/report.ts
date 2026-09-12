@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { db } from '../db';
-import type { NodeRow, IncomingReport } from '../types';
+import { db } from '../services/db';
+import type { NodeRow, IncomingReport } from '../services/types';
 
 const router = Router();
 

@@ -79,6 +79,8 @@ services:
     environment:
       PORT: "3000"
       DB_PATH: /data/xflow.db
+      # ADMIN_PASSWORD: ""                   # 可选，设置或重置管理员密码（设置完成后可注释掉）
+      # ADMIN_USERNAME: "admin"              # 可选，管理员用户名（缺省为 admin）
       # TZ: "Asia/Shanghai"                   # 可选，容器时区（用于每天定时维护任务）
       # FLOW_DEFAULT_TOTAL: "1099511627776"  # 可选，默认流量额度（字节单位，默认 1 TB）
       # RETENTION_DAYS: "90"                  # 可选，历史数据保留天数（超过自动清理，设为 0 不清理）
@@ -228,12 +230,11 @@ Content-Type: application/json
 
 浏览器访问 `http://localhost:3000/admin` 即可管理节点凭据：
 
-- **创建节点**: 输入唯一名称即可自动生成鉴权 Token。
-- **复制 Token**: 一键复制 Token 用于配置 agent。
-- **轮换 Token**: 立即吊销旧 Token 并重新生成新 Token。
-- **删除节点**: 移除该节点的授权凭据（不会删除历史流量统计数据）。
-
-> **安全提示**: `/admin` 路由默认未开启密码登录认证。若将 `xflow` 暴露在公网，建议在反向代理层（如 Nginx HTTP Basic Auth 或 Cloudflare Access）为 `/admin` 配置访问防护。
+- **首次运行向导**: 初次访问时自动展示初始化向导，引导设置首个管理员用户名与密码。
+- **密码保护与会话鉴权**: 所有节点管理接口 (`/api/admin/nodes*`) 均受到基于安全 HttpOnly Cookie 的会话认证保护，未授权访问自动拦截。
+- **节点生命周期管理**: 支持创建节点、一键复制 Token、实时轮换凭据及删除节点。
+- **个人资料与密码修改**: 在后台顶部导航可随时点击“修改密码”修改管理员用户名或更新密码。
+- **忘记密码应急重置**: 若遗忘密码，只需在 `docker-compose.yml` 中添加或取消注释 `ADMIN_PASSWORD: "新密码"` 并执行 `docker compose up -d` 重启容器，即可在启动时直接重置密码。
 
 ---
 
@@ -258,6 +259,8 @@ Content-Type: application/json
 | ------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `PORT`                    | `3000`                 | 服务监听的 HTTP 端口                                                                                                    |
 | `DB_PATH`                 | `data/xflow.db`        | SQLite 数据库存储路径                                                                                                   |
+| `ADMIN_PASSWORD`          | `""`                   | 可选，服务启动时自动设置或强制重置管理员密码（非常适合初次自动化配置或忘记密码时应急重置）                              |
+| `ADMIN_USERNAME`          | `admin`                | 可选，配合 `ADMIN_PASSWORD` 使用的管理员用户名                                                                          |
 | `FLOW_DEFAULT_TOTAL`      | `1099511627776` (1 TB) | `/flow` 接口上报的默认总配额（字节数）                                                                                  |
 | `FLOW_DEFAULT_EXPIRE`     | `0` (动态计算)         | 自定义到期时间戳（Unix 秒数）。当为 `0` 或缺省时，自动动态设置为下个月 1 号 0 点                                       |
 | `PROFILE_UPDATE_INTERVAL` | `24` (小时)            | `/flow` 响应头中的客户端自动更新间隔小时数。_（注意：若在 Sub-Store 中使用，请参考上述步骤在 Sub-Store 订阅中配置）_    |
