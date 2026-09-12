@@ -426,9 +426,14 @@
     text-overflow: ellipsis;
   }
 
+  th.th-actions {
+    text-align: center;
+  }
+
   .actions {
     display: flex;
     gap: 6px;
+    justify-content: center;
   }
 
   .action-btn {
@@ -760,8 +765,8 @@
           <tr>
             <th data-i18n="thNodeName">Node Name</th>
             <th data-i18n="thToken">Token</th>
-            <th data-i18n="thCreatedAt">Created At</th>
-            <th data-i18n="thActions">Actions</th>
+            <th data-i18n="thLastReported">Last Reported At</th>
+            <th class="th-actions" data-i18n="thActions">Actions</th>
           </tr>
         </thead>
         <tbody id="nodeTable"></tbody>

@@ -3,6 +3,7 @@ export interface NodeRow {
   name: string;
   token: string;
   created_at: string;
+  last_reported_at?: string | null;
 }
 
 export interface AdminUserRow {

@@ -44,6 +44,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_traffic_user ON traffic_reports(user);
   CREATE INDEX IF NOT EXISTS idx_traffic_node ON traffic_reports(node);
   CREATE INDEX IF NOT EXISTS idx_traffic_reported_at ON traffic_reports(reported_at);
+  CREATE INDEX IF NOT EXISTS idx_traffic_node_reported ON traffic_reports(node, reported_at DESC);
 `);
 
 export const RETENTION_DAYS = Number(process.env.RETENTION_DAYS ?? 90); // default: 90 days (3 months)

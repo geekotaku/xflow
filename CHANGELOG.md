@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Brute-Force Protection**: Added login rate limiting with cooldown locks after repeated failed attempts.
 
 ### 🖥️ Admin Console & Node Management
+- **Last Reported Timestamp**: Displayed the node's latest traffic reporting timestamp in the admin table, showing 'Never' for inactive nodes and preserving creation time on hover.
 - **Node Renaming**: Supported inline node name editing with automatic cascade to historical traffic records.
 - **Bilingual i18n & Theme Sync**: Added English and Chinese language switching and synchronized theme inheritance with the dashboard.
 

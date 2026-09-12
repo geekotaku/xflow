@@ -9,9 +9,19 @@ function generateToken(): string {
   return crypto.randomBytes(24).toString('base64url');
 }
 
+const nodeQuery = `
+  SELECT 
+    n.id,
+    n.name,
+    n.token,
+    n.created_at,
+    (SELECT MAX(reported_at) FROM traffic_reports WHERE node = n.name) AS last_reported_at
+  FROM nodes n
+`;
+
 // GET /api/admin/nodes
 router.get('/', (_req, res) => {
-  const nodes = db.prepare('SELECT * FROM nodes ORDER BY created_at DESC').all() as NodeRow[];
+  const nodes = db.prepare(`${nodeQuery} ORDER BY n.created_at DESC`).all() as NodeRow[];
   res.json(nodes);
 });
 
@@ -23,7 +33,7 @@ router.post('/', (req, res) => {
   const token = generateToken();
   try {
     const info = db.prepare('INSERT INTO nodes (name, token) VALUES (?, ?)').run(name, token);
-    const node = db.prepare('SELECT * FROM nodes WHERE id = ?').get(info.lastInsertRowid) as NodeRow;
+    const node = db.prepare(`${nodeQuery} WHERE n.id = ?`).get(info.lastInsertRowid) as NodeRow;
     res.status(201).json(node);
   } catch {
     res.status(409).json({ error: 'a node with this name already exists' });
@@ -36,7 +46,7 @@ router.post('/:id/rotate', (req, res) => {
   const token = generateToken();
   const info = db.prepare('UPDATE nodes SET token = ? WHERE id = ?').run(token, id);
   if (info.changes === 0) return res.status(404).json({ error: 'node not found' });
-  const node = db.prepare('SELECT * FROM nodes WHERE id = ?').get(id) as NodeRow;
+  const node = db.prepare(`${nodeQuery} WHERE n.id = ?`).get(id) as NodeRow;
   res.json(node);
 });
 
@@ -54,7 +64,7 @@ router.patch('/:id', (req, res) => {
       db.prepare('UPDATE nodes SET name = ? WHERE id = ?').run(name, id);
       db.prepare('UPDATE traffic_reports SET node = ? WHERE node = ?').run(name, oldNode.name);
     })();
-    const node = db.prepare('SELECT * FROM nodes WHERE id = ?').get(id) as NodeRow;
+    const node = db.prepare(`${nodeQuery} WHERE n.id = ?`).get(id) as NodeRow;
     res.json(node);
   } catch (err: any) {
     if (err?.code === 'SQLITE_CONSTRAINT_UNIQUE' || String(err).includes('UNIQUE')) {

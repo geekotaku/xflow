@@ -43,7 +43,9 @@ const I18N = {
     // Table
     thNodeName: '节点名称',
     thToken: 'Token (上报凭据)',
-    thCreatedAt: '创建时间',
+    thLastReported: '上次上报时间',
+    neverReported: '从未上报',
+    tooltipCreatedAt: '创建于',
     thActions: '操作',
     emptyNodes: '暂无节点，请在上方输入节点名称并创建。',
     btnCopyToken: '复制',
@@ -131,7 +133,9 @@ const I18N = {
     // Table
     thNodeName: 'Node Name',
     thToken: 'Token',
-    thCreatedAt: 'Created At',
+    thLastReported: 'Last Reported At',
+    neverReported: 'Never',
+    tooltipCreatedAt: 'Created at',
     thActions: 'Actions',
     emptyNodes: 'No nodes configured yet. Enter a name above to create one.',
     btnCopyToken: 'Copy',
@@ -415,20 +419,36 @@ function renderNodes(nodes) {
 
   for (const n of nodes) {
     const tr = document.createElement('tr');
-    const createdDate = new Date(n.created_at).toLocaleString(locale, {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const reportedDate = n.last_reported_at
+      ? new Date(n.last_reported_at).toLocaleString(locale, {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : t('neverReported');
+
+    const createdTooltip = n.created_at
+      ? new Date(n.created_at).toLocaleString(locale, {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : '';
+
+    const reportedHtml = n.last_reported_at
+      ? `<span title="${t('tooltipCreatedAt')}: ${escapeHtml(createdTooltip)}">${escapeHtml(reportedDate)}</span>`
+      : `<span style="opacity: 0.6;" title="${t('tooltipCreatedAt')}: ${escapeHtml(createdTooltip)}">${escapeHtml(reportedDate)}</span>`;
 
     tr.innerHTML = `
       <td><strong>${escapeHtml(n.name)}</strong></td>
       <td>
         <span class="token-box" title="${escapeHtml(n.token)}">${escapeHtml(n.token)}</span>
       </td>
-      <td style="color: var(--text-muted);">${createdDate}</td>
+      <td style="color: var(--text-muted);">${reportedHtml}</td>
       <td>
         <div class="actions">
           <button class="action-btn" data-action="copy" data-token="${escapeHtml(n.token)}">${t('btnCopyToken')}</button>
