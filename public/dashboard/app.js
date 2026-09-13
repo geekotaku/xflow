@@ -103,8 +103,9 @@ const I18N = {
 };
 
 // ── State ────────────────────────────────────────────────────────
-let currentLang     = localStorage.getItem('xflow-lang') || 'auto';
-let currentTheme    = localStorage.getItem('xflow-theme') || 'auto';
+const initialParams = new URLSearchParams(window.location.search);
+let currentLang     = initialParams.get('lang') || localStorage.getItem('xflow-lang') || 'auto';
+let currentTheme    = initialParams.get('theme') || localStorage.getItem('xflow-theme') || 'auto';
 let currentView     = 'user'; // 'user' | 'node' | 'total'
 let cachedStatsData = null;
 let chart           = null;
@@ -313,6 +314,9 @@ function applyLang(lang) {
   if (cachedStatsData) {
     renderChart(cachedStatsData);
     if (cachedStatsData.summary) renderKpis(cachedStatsData.summary);
+  }
+  if (showDetails) {
+    loadRecords(recordsPage || 1);
   }
 }
 
