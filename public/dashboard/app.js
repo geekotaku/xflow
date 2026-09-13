@@ -41,6 +41,8 @@ const I18N = {
     presetLast7:     '近 7 天',
     presetThisMonth: '本月',
     presetLastMonth: '上月',
+    showDetails:     '显示详情',
+    hideDetails:     '隐藏详情',
   },
   en: {
     title:      'Node Traffic Analytics',
@@ -83,6 +85,8 @@ const I18N = {
     presetLast7:     'Last 7 Days',
     presetThisMonth: 'This Month',
     presetLastMonth: 'Last Month',
+    showDetails:     'Show Details',
+    hideDetails:     'Hide Details',
   },
 };
 
@@ -97,6 +101,7 @@ let recordsPage     = 1;
 let recordsPageSize = 10;
 let recordsTotal    = 0;
 let recordsPages    = 1;
+let showDetails     = false;
 
 // ── Helpers ──────────────────────────────────────────────────────
 function formatBytes(bytes) {
@@ -263,6 +268,7 @@ function applyLang(lang) {
   setTxt('presetLast7',     'presetLast7');
   setTxt('presetThisMonth', 'presetThisMonth');
   setTxt('presetLastMonth', 'presetLastMonth');
+  setTxt('toggleTableText', showDetails ? 'hideDetails' : 'showDetails');
 
   const pageSizeSel = document.getElementById('pageSizeSelect');
   if (pageSizeSel) {
@@ -707,7 +713,9 @@ async function refresh() {
   }
 
   renderChart(data);
-  await loadRecords(1);
+  if (showDetails) {
+    await loadRecords(1);
+  }
 }
 
 function updatePresetActiveState() {
@@ -875,10 +883,37 @@ window.addEventListener('languagechange', () => {
   }
 });
 
+// ── Toggle Details Table ─────────────────────────────────────────
+function updateTableVisibility() {
+  const tableCard = document.getElementById('tableCard');
+  const btn = document.getElementById('toggleTableBtn');
+  const text = document.getElementById('toggleTableText');
+  if (tableCard) {
+    tableCard.style.display = showDetails ? 'block' : 'none';
+  }
+  if (btn) {
+    btn.classList.toggle('active', showDetails);
+    btn.setAttribute('aria-expanded', String(showDetails));
+  }
+  if (text) {
+    text.textContent = showDetails ? t('hideDetails') : t('showDetails');
+  }
+}
+
+document.getElementById('toggleTableBtn')?.addEventListener('click', async () => {
+  showDetails = !showDetails;
+  updateTableVisibility();
+  if (showDetails) {
+    await loadRecords(recordsPage || 1);
+    document.getElementById('tableCard')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+});
+
 // ── Init ─────────────────────────────────────────────────────────
 (async function init() {
   applyTheme(currentTheme);
   applyLang(currentLang);
+  updateTableVisibility();
 
   const today      = new Date();
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);

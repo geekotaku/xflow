@@ -6,27 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### 🔐 Authentication & Security
-- **Admin Authentication**: Added password protection to the admin console with initial setup wizard, case-insensitive login, and `ADMIN_PASSWORD` / `ADMIN_USERNAME` credential sync.
-- **Multi-Device Sessions**: Supported concurrent multi-device logins with instant global session invalidation upon logout or password change.
-- **Brute-Force Protection**: Added login rate limiting with cooldown locks after repeated failed attempts.
+### Added
+- Admin console authentication with password protection, session management, and brute-force protection.
+- Quick date range presets ('Today', 'Last 7 Days', 'This Month', 'Last Month') and instant filter updates.
+- Collapsible detailed traffic records table with "Show/Hide Details" toggle.
+- Widescreen container layout (1240px) for both dashboard and admin console.
+- Node last reported timestamp and inline node renaming in admin console.
+- Native systemd one-click installer (`install-agent.sh`) for fast agent deployment.
+- One-click agent install command copy button in admin console.
+- Direct endpoint serving for installation scripts (`/install-agent.sh`, `/install.sh`).
+- Non-interactive CLI flags and host timezone auto-detection for server `install.sh`.
 
-### 📊 Dashboard & Analytics
-- **Instant Reactive Filtering**: Removed the manual 'Apply' button across all filters; switching users, nodes, dates, or presets now triggers immediate data refreshes with auto-correcting date bounds.
-- **Quick Date Presets**: Added one-click range shortcut buttons ('Today', 'Last 7 Days', 'This Month', 'Last Month') next to the date pickers with live active state synchronization.
-- **Persistent Layout on Empty Data**: Kept the chart card and records table permanently visible with centered empty state notices when no data is returned, preventing layout collapse.
-
-### 🖥️ Admin Console & Node Management
-- **Last Reported Timestamp**: Displayed the node's latest traffic reporting timestamp in the admin table, showing 'Never' for inactive nodes and preserving creation time on hover.
-- **Node Renaming**: Supported inline node name editing with automatic cascade to historical traffic records.
-- **Bilingual i18n & Theme Sync**: Added English and Chinese language switching and synchronized theme inheritance with the dashboard.
-
-### 🚀 Deployment & Automation
-- **5-Second Agent One-Click Installer (`install-agent.sh`)**: Introduced a dedicated lightweight installer for `xflow-agent` that automatically detects/installs Node.js (>=18), configures a native `systemd` service (`xflow-agent.service`), creates secure environment configuration (`/opt/xflow-agent/xflow-agent.env`), and starts reporting in ~5 seconds with only ~30MB memory footprint (avoiding heavy Docker builds on proxy VPS nodes).
-- **Direct Server Script Serving**: Served `/install-agent.sh` and `/install.sh` directly from the xflow server, allowing mainland China or private servers to install without relying on `raw.githubusercontent.com`.
-- **One-Click Install Command in Admin Console**: Added an "Install Cmd" action button in the admin node table that copies a ready-to-run 1-line installation command pre-filled with the current server URL, node token, and node name.
-- **Agent CLI & Environment Enhancement**: Added `-s, --server <url>` option alias in `xflow-agent` alongside fallback support for `XFLOW_SERVER`, `XFLOW_TOKEN`, `XFLOW_NODE`, `XFLOW_INTERVAL`, `XFLOW_API`, and `XFLOW_USERS`.
-- **Server Installer Optimization (`install.sh`)**: Added support for non-interactive CLI flags (`-p`, `-q`, `-r`, `-a`, `-u`, `-t`, `--uninstall`, `-h`), host timezone auto-detection (`TZ`), and image pull pre-checks before building.
+### Fixed
+- Fixed empty-state layout collapse when no traffic records match the selected filters.
 
 ---
 
