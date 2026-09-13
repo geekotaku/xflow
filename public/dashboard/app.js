@@ -43,6 +43,12 @@ const I18N = {
     presetLastMonth: '上月',
     showDetails:     '显示详情',
     hideDetails:     '隐藏详情',
+    kpiMonth:        '本月总流量',
+    kpiToday:        '今日实时流量',
+    kpiUsers:        '用户总览',
+    kpiNodes:        '在线节点数',
+    kpiTotalUsers:   n => `全部登记用户: ${n}`,
+    kpiTotalNodes:   n => `全部配置节点: ${n}`,
   },
   en: {
     title:      'Node Traffic Analytics',
@@ -87,6 +93,12 @@ const I18N = {
     presetLastMonth: 'Last Month',
     showDetails:     'Show Details',
     hideDetails:     'Hide Details',
+    kpiMonth:        'Monthly Traffic',
+    kpiToday:        "Today's Traffic",
+    kpiUsers:        'User Overview',
+    kpiNodes:        'Online Nodes',
+    kpiTotalUsers:   n => `Total registered: ${n}`,
+    kpiTotalNodes:   n => `Total configured: ${n}`,
   },
 };
 
@@ -269,6 +281,10 @@ function applyLang(lang) {
   setTxt('presetThisMonth', 'presetThisMonth');
   setTxt('presetLastMonth', 'presetLastMonth');
   setTxt('toggleTableText', showDetails ? 'hideDetails' : 'showDetails');
+  setTxt('kpiLabelMonth',   'kpiMonth');
+  setTxt('kpiLabelToday',   'kpiToday');
+  setTxt('kpiLabelUsers',   'kpiUsers');
+  setTxt('kpiLabelNodes',   'kpiNodes');
 
   const pageSizeSel = document.getElementById('pageSizeSelect');
   if (pageSizeSel) {
@@ -294,7 +310,10 @@ function applyLang(lang) {
     pageInfo.textContent = t('pageInfo', pageInfo._cur, pageInfo._tot);
   }
 
-  if (cachedStatsData) renderChart(cachedStatsData);
+  if (cachedStatsData) {
+    renderChart(cachedStatsData);
+    if (cachedStatsData.summary) renderKpis(cachedStatsData.summary);
+  }
 }
 
 initDropdown('langDropdown', 'langBtn');
@@ -313,6 +332,10 @@ const emptyState = document.getElementById('emptyState');
 async function loadMeta() {
   const res  = await fetch('/api/stats/meta');
   const meta = await res.json();
+  if (meta.version) {
+    const el = document.getElementById('footerVersion');
+    if (el) el.textContent = `v${meta.version}`;
+  }
   for (const sel of [userFilter, nodeFilter]) {
     while (sel.options.length > 1) sel.remove(1);
   }
@@ -685,6 +708,39 @@ async function loadRecords(page = 1) {
   if (pagBar) pagBar.style.display = recordsTotal > 0 ? 'flex' : 'none';
 }
 
+// ── KPI Summary Cards ────────────────────────────────────────────
+function renderKpis(summary) {
+  if (!summary) return;
+  const setTxt = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+
+  // 1. Monthly Traffic
+  setTxt('kpiValMonth', formatBytes(summary.monthTotal));
+  setTxt('kpiUpMonth', `↑ ${formatBytes(summary.monthUplink)}`);
+  setTxt('kpiDownMonth', `↓ ${formatBytes(summary.monthDownlink)}`);
+
+  // 2. Today's Traffic
+  setTxt('kpiValToday', formatBytes(summary.todayTotal));
+  setTxt('kpiUpToday', `↑ ${formatBytes(summary.todayUplink)}`);
+  setTxt('kpiDownToday', `↓ ${formatBytes(summary.todayDownlink)}`);
+
+  // 3. Active Users
+  setTxt('kpiValUsers', String(summary.activeUsers ?? 0));
+  setTxt('kpiSubUsers', t('kpiTotalUsers', summary.totalUsers ?? 0));
+
+  // 4. Online Nodes
+  setTxt('kpiValNodesCount', String(summary.onlineNodes ?? 0));
+  setTxt('kpiSubNodes', t('kpiTotalNodes', summary.totalNodes ?? 0));
+
+  const pulse = document.getElementById('kpiPulse');
+  if (pulse) {
+    const isOnline = (summary.onlineNodes || 0) > 0;
+    pulse.className = `pulse-indicator ${isOnline ? 'online' : 'offline'}`;
+  }
+}
+
 // ── Refresh ──────────────────────────────────────────────────────
 async function refresh() {
   const res  = await fetch(`/api/stats?${buildQuery()}`);
@@ -713,6 +769,7 @@ async function refresh() {
   }
 
   renderChart(data);
+  renderKpis(data.summary);
   if (showDetails) {
     await loadRecords(1);
   }

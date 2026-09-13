@@ -760,3 +760,12 @@ editNodeForm.addEventListener('submit', async (e) => {
 applyTheme(currentTheme);
 applyLang(currentLang);
 checkAuth();
+
+fetch('/api/stats/meta')
+  .then(r => r.json())
+  .then(meta => {
+    if (meta.version) {
+      document.querySelectorAll('#footerVersion').forEach(el => el.textContent = `v${meta.version}`);
+    }
+  })
+  .catch(() => {});

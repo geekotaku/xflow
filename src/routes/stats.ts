@@ -1,7 +1,17 @@
 import { Router } from "express";
+import fs from "fs";
+import path from "path";
 import { db } from "../services/db";
 
 const router = Router();
+
+let packageVersion = "1.0.4";
+try {
+  const pkg = JSON.parse(
+    fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8"),
+  );
+  if (pkg.version) packageVersion = pkg.version;
+} catch {}
 
 function parseList(v: unknown): string[] | null {
   if (typeof v !== "string" || !v.trim()) return null;
@@ -31,6 +41,7 @@ router.get("/meta", (_req, res) => {
     node: string;
   }[];
   res.json({
+    version: packageVersion,
     users: users.map((u) => u.user),
     nodes: nodes.map((n) => n.node),
   });
@@ -136,9 +147,98 @@ router.get("/", (req, res) => {
     total: number;
   }[];
 
+  // ── Summary KPI metrics ───────────────────────────────────────
+  // Calculate global summary metrics for top overview cards (unlinked from filters)
+  // 1. This Month's global traffic & active users (start of month local client time -> now)
+  const monthRow = db
+    .prepare(
+      `SELECT COALESCE(SUM(uplink), 0) AS uplink,
+              COALESCE(SUM(downlink), 0) AS downlink,
+              COUNT(DISTINCT user) AS active_users
+       FROM traffic_reports 
+       WHERE date(datetime(reported_at, '${tzModifier}')) >= date('now', '${tzModifier}', 'start of month')`,
+    )
+    .get() as { uplink: number; downlink: number; active_users: number };
+  const monthUplink = Number(monthRow?.uplink) || 0;
+  const monthDownlink = Number(monthRow?.downlink) || 0;
+  const monthTotal = monthUplink + monthDownlink;
+  const activeUsers = Number(monthRow?.active_users) || 0;
+
+  // 2. Today's global traffic (00:00:00 local client time -> now)
+  const todayRow = db
+    .prepare(
+      `SELECT COALESCE(SUM(uplink), 0) AS uplink,
+              COALESCE(SUM(downlink), 0) AS downlink
+       FROM traffic_reports 
+       WHERE date(datetime(reported_at, '${tzModifier}')) = date('now', '${tzModifier}')`,
+    )
+    .get() as { uplink: number; downlink: number };
+  const todayUplink = Number(todayRow?.uplink) || 0;
+  const todayDownlink = Number(todayRow?.downlink) || 0;
+  const todayTotal = todayUplink + todayDownlink;
+
+  // 3. Total distinct registered users in system
+  const totalUsersRow = db
+    .prepare("SELECT COUNT(DISTINCT user) AS count FROM traffic_reports")
+    .get() as { count: number };
+  const totalUsers = Number(totalUsersRow?.count) || 0;
+
+  // 4. Online nodes (reported within last 30 minutes)
+  const totalNodesInDb =
+    (db.prepare("SELECT COUNT(*) AS count FROM nodes").get() as { count: number })
+      ?.count || 0;
+
+  let onlineNodes = 0;
+  let totalNodes = 0;
+
+  if (totalNodesInDb > 0) {
+    const nodeStatusRow = db
+      .prepare(
+        `SELECT 
+           COUNT(*) AS total,
+           COUNT(CASE WHEN last_reported_at >= datetime('now', '-30 minutes') THEN 1 END) AS online
+         FROM (
+           SELECT n.name, (SELECT MAX(reported_at) FROM traffic_reports WHERE node = n.name) AS last_reported_at
+           FROM nodes n
+         )`,
+      )
+      .get() as { total: number; online: number };
+    totalNodes = Number(nodeStatusRow?.total) || 0;
+    onlineNodes = Number(nodeStatusRow?.online) || 0;
+  } else {
+    const nodeStatusRow = db
+      .prepare(
+        `SELECT 
+           COUNT(*) AS total,
+           COUNT(CASE WHEN max_rep >= datetime('now', '-30 minutes') THEN 1 END) AS online
+         FROM (
+           SELECT node, MAX(reported_at) AS max_rep
+           FROM traffic_reports
+           GROUP BY node
+         )`,
+      )
+      .get() as { total: number; online: number };
+    totalNodes = Number(nodeStatusRow?.total) || 0;
+    onlineNodes = Number(nodeStatusRow?.online) || 0;
+  }
+
+  const summary = {
+    monthTotal,
+    monthUplink,
+    monthDownlink,
+    todayTotal,
+    todayUplink,
+    todayDownlink,
+    activeUsers,
+    totalUsers,
+    onlineNodes,
+    totalNodes,
+  };
+
   res.json({
     range: { start: startIso, end: endIso },
     hourly,
+    summary,
     byUser,
     byNode,
     byUserNode,

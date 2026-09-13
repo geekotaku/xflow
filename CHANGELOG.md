@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Global system overview KPI cards (Monthly Traffic, Today's Traffic, User Overview, Online Nodes) positioned above filters.
+- Footer with "Powered by xFlow", dynamic version badge, and GitHub repository link.
 - Admin console authentication with password protection, session management, and brute-force protection.
 - Quick date range presets ('Today', 'Last 7 Days', 'This Month', 'Last Month') and instant filter updates.
 - Collapsible detailed traffic records table with "Show/Hide Details" toggle.
