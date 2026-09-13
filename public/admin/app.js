@@ -765,7 +765,10 @@ fetch('/api/stats/meta')
   .then(r => r.json())
   .then(meta => {
     if (meta.version) {
-      document.querySelectorAll('#footerVersion').forEach(el => el.textContent = `v${meta.version}`);
+      document.querySelectorAll('#footerVersion').forEach(el => {
+        el.textContent = `v${meta.version}`;
+        el.style.display = 'inline-block';
+      });
     }
   })
   .catch(() => {});

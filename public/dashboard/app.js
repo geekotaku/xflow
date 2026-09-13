@@ -338,7 +338,10 @@ async function loadMeta() {
   const meta = await res.json();
   if (meta.version) {
     const el = document.getElementById('footerVersion');
-    if (el) el.textContent = `v${meta.version}`;
+    if (el) {
+      el.textContent = `v${meta.version}`;
+      el.style.display = 'inline-block';
+    }
   }
   for (const sel of [userFilter, nodeFilter]) {
     while (sel.options.length > 1) sel.remove(1);
