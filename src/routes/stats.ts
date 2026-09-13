@@ -5,7 +5,7 @@ import { db } from "../services/db";
 
 const router = Router();
 
-let packageVersion = "1.0.4";
+let packageVersion = "1.0.5";
 try {
   const pkg = JSON.parse(
     fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8"),
