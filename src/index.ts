@@ -8,6 +8,14 @@ import flowRouter from "./routes/flow";
 import nodesRouter from "./routes/nodes";
 import authRouter from "./routes/auth";
 import { syncAdminFromEnv, requireAdminAuth } from "./services/auth";
+import { logger } from "./services/utils";
+
+process.on("unhandledRejection", (reason) => {
+  logger.error("[SYSTEM ERROR] Unhandled Rejection:", reason);
+});
+process.on("uncaughtException", (err) => {
+  logger.error("[SYSTEM ERROR] Uncaught Exception:", err);
+});
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -56,7 +64,7 @@ app.use(
 app.use(express.static(path.join(__dirname, "..", "public", "dashboard")));
 
 app.listen(PORT, () => {
-  console.log(
+  logger.info(
     `xflow listening on :${PORT} (data retention: ${RETENTION_DAYS > 0 ? `${RETENTION_DAYS} days` : "unlimited"})`,
   );
 });

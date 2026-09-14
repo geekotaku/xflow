@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### 🏗️ Architecture & Refactoring
+- **Centralized Utility Module (`utils.ts`)**: Extracted and consolidated scattered helper functions across the server and agent into dedicated `utils.ts` modules. Unified parameter list parsing (`parseList`), safe ISO date parsing (`parseDateIso`), traffic and byte unit formatting (`toMB`, `formatBytes`), cryptographically secure token generation (`generateToken`), and dynamic package version retrieval (`getPackageVersion`).
+- **Standardized Type Definitions & API Contracts (`types.ts`)**: Consolidated dispersed models (`AuthenticatedRequest`, `AggResult`) and eliminated anonymous inline type castings across database queries. Introduced formal API response contracts (`StatsResponse`, `StatsMetaResponse`, `PaginatedRecordsResponse`, `TrafficSummary`, `UserTrafficStats`, `NodeTrafficStats`, `TimeSeries*`) for full type-safety and maintainability.
+- **Timezone-Aware Local Logging System**: Replaced ISO 8601 logging strings with standardized local timezone timestamps (`YYYY-MM-DD HH:mm:ss`) across all server and agent components, strictly respecting the configured `TZ` environment variable (e.g. `TZ=Asia/Shanghai`) with graceful fallback. Added global unhandled rejection and uncaught exception logging handlers for both server and agent.
+
+---
+
 ## [1.0.5] - 2026-09-13
 
 ### Added

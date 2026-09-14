@@ -14,6 +14,7 @@ import {
   AuthenticatedRequest,
   checkLoginLimit,
 } from "../services/auth";
+import { logger } from "../services/utils";
 
 const router = Router();
 
@@ -185,6 +186,7 @@ router.post(
 
       res.json({ success: true, username: newUsername });
     } catch (err: any) {
+      logger.error("[AUTH ERROR] Failed to update profile:", err);
       res.status(500).json({ error: "Failed to update profile" });
     }
   },

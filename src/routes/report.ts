@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../services/db';
 import type { NodeRow, IncomingReport } from '../services/types';
+import { logger, formatLocalTime, toMB, parseDateIso } from '../services/utils';
 
 const router = Router();
 
@@ -9,15 +10,11 @@ const insertReport = db.prepare(
   'INSERT INTO traffic_reports (node, user, uplink, downlink, reported_at) VALUES (?, ?, ?, ?, ?)'
 );
 
-function toMB(bytes: number): string {
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-}
-
 router.post('/', (req, res) => {
   const auth = req.header('authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length) : '';
   if (!token) {
-    console.error(`[ERROR] Report rejected: missing bearer token (IP: ${req.ip})`);
+    logger.error(`[ERROR] Report rejected: missing bearer token (IP: ${req.ip})`);
     return res.status(401).json({ error: 'missing bearer token' });
   }
 
@@ -25,20 +22,17 @@ router.post('/', (req, res) => {
   // this stops one node from reporting traffic under another node's name.
   const node = findNodeByToken.get(token) as NodeRow | undefined;
   if (!node) {
-    console.error(`[ERROR] Report rejected: invalid token "${token}" (IP: ${req.ip})`);
+    logger.error(`[ERROR] Report rejected: invalid token "${token}" (IP: ${req.ip})`);
     return res.status(401).json({ error: 'invalid token' });
   }
 
   const body = req.body as IncomingReport;
   if (!body || !Array.isArray(body.users) || body.users.length === 0) {
-    console.error(`[ERROR] Report rejected for node "${node.name}": body must include a non-empty users array`);
+    logger.error(`[ERROR] Report rejected for node "${node.name}": body must include a non-empty users array`);
     return res.status(400).json({ error: 'body must include a non-empty users array' });
   }
 
-  const reportedAt =
-    body.timestamp && !Number.isNaN(Date.parse(body.timestamp))
-      ? new Date(body.timestamp).toISOString()
-      : new Date().toISOString();
+  const reportedAt = parseDateIso(body.timestamp);
 
   const userSummaries = body.users
     .filter((entry) => typeof entry?.user === 'string' && entry.user)
@@ -48,8 +42,9 @@ router.post('/', (req, res) => {
       return `${entry.user}: upload ${toMB(up)}, download ${toMB(down)}`;
     });
 
-  console.info(
-    `[INFO] Node "${node.name}" report at ${reportedAt} (${body.users.length} users):\n` +
+  const reportedAtLocal = formatLocalTime(new Date(reportedAt));
+  logger.info(
+    `[INFO] Node "${node.name}" report at ${reportedAtLocal} (${body.users.length} users):\n` +
       userSummaries.map((s) => `  - ${s}`).join('\n'),
   );
 

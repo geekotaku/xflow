@@ -1,13 +1,9 @@
 import { Router } from 'express';
-import crypto from 'crypto';
 import { db } from '../services/db';
 import type { NodeRow } from '../services/types';
+import { logger, generateToken } from '../services/utils';
 
 const router = Router();
-
-function generateToken(): string {
-  return crypto.randomBytes(24).toString('base64url');
-}
 
 const nodeQuery = `
   SELECT 
@@ -70,6 +66,7 @@ router.patch('/:id', (req, res) => {
     if (err?.code === 'SQLITE_CONSTRAINT_UNIQUE' || String(err).includes('UNIQUE')) {
       res.status(409).json({ error: 'a node with this name already exists' });
     } else {
+      logger.error(`[ERROR] Failed to update node ${id}:`, err);
       res.status(500).json({ error: 'failed to update node' });
     }
   }

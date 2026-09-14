@@ -1,7 +1,10 @@
 import crypto from "crypto";
 import { Request, Response, NextFunction } from "express";
 import { db } from "./db";
-import type { AdminUserRow } from "./types";
+import type { AdminUserRow, AuthenticatedRequest } from "./types";
+import { logger } from "./utils";
+
+export type { AuthenticatedRequest };
 
 // ── Password & Crypto Utilities ──────────────────────────────────
 
@@ -108,7 +111,7 @@ export function syncAdminFromEnv(): void {
     if (hasPassword) {
       const username = hasUsername ? envUsername.trim() : "admin";
       createAdminUser(username, envPassword.trim());
-      console.info(
+      logger.info(
         `[AUTH] Admin account initialized from environment variables (Username: ${username}).`,
       );
     }
@@ -123,7 +126,7 @@ export function syncAdminFromEnv(): void {
 
   if (usernameChanged || passwordChanged) {
     updateAdminCredentials(targetUsername, targetPassword, passwordChanged);
-    console.info(
+    logger.info(
       `[AUTH] Admin credentials updated from environment variables (Username: ${targetUsername}${passwordChanged ? ", password updated" : ""}).`,
     );
   }
@@ -192,12 +195,6 @@ export function clearSessionCookie(res: Response): void {
     "Set-Cookie",
     "xflow_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0",
   );
-}
-
-export interface AuthenticatedRequest extends Request {
-  admin?: {
-    username: string;
-  };
 }
 
 export function requireAdminAuth(

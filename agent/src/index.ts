@@ -21,12 +21,20 @@
 import * as os from "os";
 import * as fs from "fs";
 import * as path from "path";
-import { Command, InvalidArgumentError } from "commander";
+import { Command } from "commander";
 import {
   createStatsClient,
   makeQueryStats,
   groupUserTraffic,
 } from "./xray-stats";
+import { logger, parsePositiveInt, parseUserList } from "./utils";
+
+process.on("unhandledRejection", (reason) => {
+  logger.error("[SYSTEM ERROR] Unhandled Rejection:", reason);
+});
+process.on("uncaughtException", (err) => {
+  logger.error("[SYSTEM ERROR] Uncaught Exception:", err);
+});
 
 interface Config {
   endpoint: string;
@@ -41,20 +49,6 @@ interface UserTraffic {
   user: string;
   uplink: number;
   downlink: number;
-}
-
-function parsePositiveInt(value: string): number {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n <= 0)
-    throw new InvalidArgumentError("must be a positive number");
-  return n;
-}
-
-function parseUserList(value: string): string[] {
-  return value
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
 
 function parseArgs(argv: string[]): Config {
@@ -121,13 +115,13 @@ function parseArgs(argv: string[]): Config {
     (process.env.XFLOW_USERS ? parseUserList(process.env.XFLOW_USERS) : undefined);
 
   if (!endpoint) {
-    console.error(
+    logger.error(
       "error: required option '-s, --server <url>' (or '-e, --endpoint <url>') not specified (or set XFLOW_SERVER env)",
     );
     process.exit(1);
   }
   if (!token) {
-    console.error(
+    logger.error(
       "error: required option '-t, --token <token>' not specified (or set XFLOW_TOKEN env)",
     );
     process.exit(1);
@@ -165,11 +159,11 @@ function loadState(): void {
           }
         }
         isInitialized = true;
-        console.log(`[STATE] Restored state for ${lastReported.size} user(s) from ${STATE_FILE}`);
+        logger.info(`[STATE] Restored state for ${lastReported.size} user(s) from ${STATE_FILE}`);
       }
     }
   } catch (err) {
-    console.warn(`[STATE WARN] Could not load state file: ${(err as Error).message}`);
+    logger.warn(`[STATE WARN] Could not load state file: ${(err as Error).message}`);
   }
 }
 
@@ -185,7 +179,7 @@ function saveState(): void {
     }
     fs.writeFileSync(STATE_FILE, JSON.stringify(obj, null, 2), "utf8");
   } catch (err) {
-    console.error(`[STATE ERROR] Failed to save state file: ${(err as Error).message}`);
+    logger.error(`[STATE ERROR] Failed to save state file: ${(err as Error).message}`);
   }
 }
 
@@ -208,7 +202,7 @@ async function collectStats(
         });
         for (const [u, v] of groupUserTraffic(stat)) current.set(u, v);
       } catch (err) {
-        console.error(
+        logger.error(
           `query failed for user=${user}: ${(err as Error).message}`,
         );
       }
@@ -271,7 +265,7 @@ async function tick(
   try {
     currentSnapshot = await collectStats(queryStats, config);
   } catch (err) {
-    console.error(`[${ts}] stats query failed: ${(err as Error).message}`);
+    logger.error(`stats query failed: ${(err as Error).message}`);
     return;
   }
 
@@ -283,15 +277,15 @@ async function tick(
     }
     saveState();
     isInitialized = true;
-    console.log(
-      `[${ts}] Initial baseline calibrated for ${currentSnapshot.size} user(s). Will report new traffic starting next interval.`,
+    logger.info(
+      `Initial baseline calibrated for ${currentSnapshot.size} user(s). Will report new traffic starting next interval.`,
     );
     return;
   }
 
   const deltas = calculateDeltas(currentSnapshot);
   if (!deltas.length) {
-    console.log(`[${ts}] no new traffic this interval, skipping report`);
+    logger.info("no new traffic this interval, skipping report");
     return;
   }
 
@@ -301,8 +295,8 @@ async function tick(
       timestamp: ts,
       users: deltas,
     });
-    console.log(
-      `[${ts}] reported node=${config.node} users=${JSON.stringify(deltas)}`,
+    logger.info(
+      `reported node=${config.node} users=${JSON.stringify(deltas)}`,
     );
 
     // Commit snapshot and persist to state file ONLY after report was successfully accepted
@@ -311,7 +305,7 @@ async function tick(
     }
     saveState();
   } catch (err) {
-    console.error(`[${ts}] report failed: ${(err as Error).message}`);
+    logger.error(`report failed: ${(err as Error).message}`);
     // lastReported is NOT updated on failure — next interval will retry and
     // include all traffic accumulated during the downtime.
   }
@@ -324,7 +318,7 @@ function main(): void {
   const client = createStatsClient(config.api);
   const queryStats = makeQueryStats(client);
 
-  console.log(
+  logger.info(
     `starting xflow-agent: node=${config.node} users=${config.users ? config.users.join(",") : "ALL"} ` +
       `api=${config.api} endpoint=${config.endpoint} interval=${config.interval}min`,
   );

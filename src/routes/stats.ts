@@ -1,31 +1,20 @@
 import { Router } from "express";
-import fs from "fs";
-import path from "path";
 import { db } from "../services/db";
+import { parseList, parseDateIso, getPackageVersion } from "../services/utils";
+import type {
+  StatsResponse,
+  StatsMetaResponse,
+  PaginatedRecordsResponse,
+  TrafficSummary,
+  UserTrafficStats,
+  NodeTrafficStats,
+  UserNodeTrafficStats,
+  TimeSeriesUserStats,
+  TimeSeriesNodeStats,
+  TimeSeriesTotalStats,
+} from "../services/types";
 
 const router = Router();
-
-let packageVersion = "";
-try {
-  const pkg = JSON.parse(
-    fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8"),
-  );
-  if (pkg.version) packageVersion = pkg.version;
-} catch {}
-
-function parseList(v: unknown): string[] | null {
-  if (typeof v !== "string" || !v.trim()) return null;
-  return v
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-function parseDate(v: unknown, fallback: () => string): string {
-  if (typeof v === "string" && !Number.isNaN(Date.parse(v)))
-    return new Date(v).toISOString();
-  return fallback();
-}
 
 // Populates the user/node filter dropdowns from whatever has actually
 // been reported so far.
@@ -40,18 +29,19 @@ router.get("/meta", (_req, res) => {
     .all() as {
     node: string;
   }[];
-  res.json({
-    version: packageVersion,
+  const response: StatsMetaResponse = {
+    version: getPackageVersion(),
     users: users.map((u) => u.user),
     nodes: nodes.map((n) => n.node),
-  });
+  };
+  res.json(response);
 });
 
 router.get("/", (req, res) => {
   const users = parseList(req.query.user);
   const nodes = parseList(req.query.node);
-  const startIso = parseDate(req.query.start, () => new Date(0).toISOString());
-  const endIso = parseDate(req.query.end, () => new Date().toISOString());
+  const startIso = parseDateIso(req.query.start, () => new Date(0).toISOString());
+  const endIso = parseDateIso(req.query.end, () => new Date().toISOString());
 
   // Client timezone offset in minutes (e.g. +480 for UTC+8, -300 for UTC-5). Defaults to 0 (UTC).
   const tzOffset = Math.max(-840, Math.min(840, Number(req.query.tz) || 0));
@@ -86,7 +76,7 @@ router.get("/", (req, res) => {
       `SELECT user, SUM(uplink) AS uplink, SUM(downlink) AS downlink
        FROM traffic_reports WHERE ${where} GROUP BY user ORDER BY user`,
     )
-    .all(...params) as { user: string; uplink: number; downlink: number }[];
+    .all(...params) as UserTrafficStats[];
 
   // per-node totals
   const byNode = db
@@ -94,7 +84,7 @@ router.get("/", (req, res) => {
       `SELECT node, SUM(uplink) AS uplink, SUM(downlink) AS downlink
        FROM traffic_reports WHERE ${where} GROUP BY node ORDER BY node`,
     )
-    .all(...params) as { node: string; uplink: number; downlink: number }[];
+    .all(...params) as NodeTrafficStats[];
 
   // per-user per-node detail (for the detail table)
   const byUserNode = db
@@ -103,12 +93,7 @@ router.get("/", (req, res) => {
        FROM traffic_reports WHERE ${where}
        GROUP BY user, node ORDER BY user, node`,
     )
-    .all(...params) as {
-    user: string;
-    node: string;
-    uplink: number;
-    downlink: number;
-  }[];
+    .all(...params) as UserNodeTrafficStats[];
 
   // time-bucket × user (for stacked chart — one series per user)
   const byTimeUser = db
@@ -118,7 +103,7 @@ router.get("/", (req, res) => {
        FROM traffic_reports WHERE ${where}
        GROUP BY bucket, user ORDER BY bucket, user`,
     )
-    .all(...params) as { bucket: string; user: string; total: number }[];
+    .all(...params) as TimeSeriesUserStats[];
 
   // time-bucket × node (for stacked chart — one series per node)
   const byTimeNode = db
@@ -128,7 +113,7 @@ router.get("/", (req, res) => {
        FROM traffic_reports WHERE ${where}
        GROUP BY bucket, node ORDER BY bucket, node`,
     )
-    .all(...params) as { bucket: string; node: string; total: number }[];
+    .all(...params) as TimeSeriesNodeStats[];
 
   // time-bucket total traffic (uplink, downlink, total)
   const byTimeTotal = db
@@ -140,12 +125,7 @@ router.get("/", (req, res) => {
        FROM traffic_reports WHERE ${where}
        GROUP BY bucket ORDER BY bucket`,
     )
-    .all(...params) as {
-    bucket: string;
-    uplink: number;
-    downlink: number;
-    total: number;
-  }[];
+    .all(...params) as TimeSeriesTotalStats[];
 
   // ── Summary KPI metrics ───────────────────────────────────────
   // Calculate global summary metrics for top overview cards (unlinked from filters)
@@ -222,7 +202,7 @@ router.get("/", (req, res) => {
     onlineNodes = Number(nodeStatusRow?.online) || 0;
   }
 
-  const summary = {
+  const summary: TrafficSummary = {
     monthTotal,
     monthUplink,
     monthDownlink,
@@ -235,7 +215,7 @@ router.get("/", (req, res) => {
     totalNodes,
   };
 
-  res.json({
+  const response: StatsResponse = {
     range: { start: startIso, end: endIso },
     hourly,
     summary,
@@ -245,15 +225,17 @@ router.get("/", (req, res) => {
     byTimeUser,
     byTimeNode,
     byTimeTotal,
-  });
+  };
+
+  res.json(response);
 });
 
 // Paginated raw records for the detail table
 router.get("/records", (req, res) => {
   const users = parseList(req.query.user);
   const nodes = parseList(req.query.node);
-  const startIso = parseDate(req.query.start, () => new Date(0).toISOString());
-  const endIso = parseDate(req.query.end, () => new Date().toISOString());
+  const startIso = parseDateIso(req.query.start, () => new Date(0).toISOString());
+  const endIso = parseDateIso(req.query.end, () => new Date().toISOString());
   const page = Math.max(1, Number(req.query.page) || 1);
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
   const offset = (page - 1) * limit;
@@ -284,15 +266,17 @@ router.get("/records", (req, res) => {
        ORDER BY reported_at DESC
        LIMIT ? OFFSET ?`,
     )
-    .all(...params, limit, offset) as {
-    reported_at: string;
-    user: string;
-    node: string;
-    uplink: number;
-    downlink: number;
-  }[];
+    .all(...params, limit, offset) as PaginatedRecordsResponse["records"];
 
-  res.json({ total, page, pages: Math.ceil(total / limit), limit, records });
+  const response: PaginatedRecordsResponse = {
+    total,
+    page,
+    pages: Math.ceil(total / limit),
+    limit,
+    records,
+  };
+
+  res.json(response);
 });
 
 export default router;

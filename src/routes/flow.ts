@@ -1,7 +1,23 @@
 import { Router } from "express";
 import { db } from "../services/db";
+import { parseList, parseDateIso } from "../services/utils";
 
 const router = Router();
+
+// No real quota exists for self-built nodes, so `total` is set to 1 TB by default
+// (high enough that clients never render a "quota exceeded" warning). Override via
+// FLOW_DEFAULT_TOTAL environment variable (in bytes) if you want it to reflect
+// your VPS's actual monthly bandwidth cap.
+const DEFAULT_TOTAL_BYTES = Number(process.env.FLOW_DEFAULT_TOTAL) || 1024 ** 4; // 1 TB
+
+// Auto-update interval in hours (header: profile-update-interval, default: 24)
+const PROFILE_UPDATE_INTERVAL =
+  process.env.PROFILE_UPDATE_INTERVAL !== undefined
+    ? Number(process.env.PROFILE_UPDATE_INTERVAL)
+    : 24;
+
+// Web page URL for clients (header: profile-web-page-url, optional)
+const PROFILE_WEB_PAGE_URL = process.env.PROFILE_WEB_PAGE_URL?.trim() || null;
 
 // Default window is the 1st of the current UTC month through now.
 function firstOfMonthUtc(): string {
@@ -21,42 +37,10 @@ function endOfMonthUtcSeconds(): number {
   );
 }
 
-// No real quota exists for self-built nodes, so `total` is set to 1 TB by default
-// (high enough that clients never render a "quota exceeded" warning). Override via
-// FLOW_DEFAULT_TOTAL environment variable (in bytes) if you want it to reflect
-// your VPS's actual monthly bandwidth cap.
-const DEFAULT_TOTAL_BYTES = Number(process.env.FLOW_DEFAULT_TOTAL) || 1024 ** 4; // 1 TB
-
-// Auto-update interval in hours (header: profile-update-interval, default: 24)
-const PROFILE_UPDATE_INTERVAL =
-  process.env.PROFILE_UPDATE_INTERVAL !== undefined
-    ? Number(process.env.PROFILE_UPDATE_INTERVAL)
-    : 24;
-
-// Web page URL for clients (header: profile-web-page-url, optional)
-const PROFILE_WEB_PAGE_URL = process.env.PROFILE_WEB_PAGE_URL?.trim() || null;
-
 router.get("/", (req, res) => {
-  const userParam = typeof req.query.user === "string" ? req.query.user : null;
-  const users = userParam
-    ? userParam
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
-    : null;
-
-  const startParam =
-    typeof req.query.start === "string" ? req.query.start : null;
-  const endParam = typeof req.query.end === "string" ? req.query.end : null;
-
-  const startIso =
-    startParam && !Number.isNaN(Date.parse(startParam))
-      ? new Date(startParam).toISOString()
-      : firstOfMonthUtc();
-  const endIso =
-    endParam && !Number.isNaN(Date.parse(endParam))
-      ? new Date(endParam).toISOString()
-      : new Date().toISOString();
+  const users = parseList(req.query.user);
+  const startIso = parseDateIso(req.query.start, firstOfMonthUtc);
+  const endIso = parseDateIso(req.query.end);
 
   const conditions = ["reported_at >= ?", "reported_at <= ?"];
   const params: unknown[] = [startIso, endIso];
@@ -102,7 +86,9 @@ router.get("/", (req, res) => {
     download,
     total,
     expire,
-    ...(PROFILE_UPDATE_INTERVAL > 0 ? { updateInterval: PROFILE_UPDATE_INTERVAL } : {}),
+    ...(PROFILE_UPDATE_INTERVAL > 0
+      ? { updateInterval: PROFILE_UPDATE_INTERVAL }
+      : {}),
     ...(PROFILE_WEB_PAGE_URL ? { webPageUrl: PROFILE_WEB_PAGE_URL } : {}),
   });
 });

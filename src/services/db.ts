@@ -1,6 +1,8 @@
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
+import { logger } from "./utils";
+import type { AggResult } from "./types";
 
 const DB_PATH =
   process.env.DB_PATH || path.join(__dirname, "..", "..", "data", "xflow.db");
@@ -61,18 +63,13 @@ export function runCleanup(): void {
       .run(cutoffDate);
     if (info.changes > 0) {
       db.pragma("optimize");
-      console.info(
+      logger.info(
         `[CLEANUP] Purged ${info.changes} traffic records older than ${RETENTION_DAYS} days.`,
       );
     }
   } catch (err) {
-    console.error(`[CLEANUP ERROR] Failed to purge old records:`, err);
+    logger.error(`[CLEANUP ERROR] Failed to purge old records:`, err);
   }
-}
-
-interface AggResult {
-  aggregatedHours: number;
-  purgedRows: number;
 }
 
 // Transaction: aggregates uncompacted historical reports older than cutoffDate
@@ -148,13 +145,13 @@ export function runHourlyAggregation(): void {
     const result = aggregateTransaction(cutoffDate);
     if (result.aggregatedHours > 0) {
       db.pragma("optimize");
-      console.info(
+      logger.info(
         `[AGGREGATION] Compacted historical data older than ${AGGREGATION_DAYS} days: ` +
           `created ${result.aggregatedHours} 1h summaries, purged ${result.purgedRows} raw rows.`,
       );
     }
   } catch (err) {
-    console.error(
+    logger.error(
       `[AGGREGATION ERROR] Failed to compact historical records:`,
       err,
     );
@@ -178,7 +175,7 @@ function scheduleDailyMaintenance(): void {
   }
 
   const msUntil2AM = getMsUntilNextTargetHour(2);
-  console.info(
+  logger.info(
     `[SCHEDULER] Next database maintenance scheduled in ${(msUntil2AM / 1000 / 60).toFixed(1)} minutes (at ~02:00 AM local time).`,
   );
 
