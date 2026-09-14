@@ -43,10 +43,10 @@ ${notes}
 
 ### 🚀 One-Click Installers
 - **Server**: \`sudo bash <(curl -fsSL https://raw.githubusercontent.com/${repo}/main/install.sh)\`
-- **Agent**: \`sudo bash <(curl -fsSL https://raw.githubusercontent.com/${repo}/main/agent/install.sh)\`
+- **Agent**: \`sudo bash <(curl -fsSL https://raw.githubusercontent.com/${repo}/main/install-agent.sh)\`
 
-### 📁 Prebuilt Archives
-Ready-to-run release bundles containing pre-compiled \`dist/\` are attached below.
+### ⚡ Standalone Agent Binaries
+Prebuilt standalone executables with zero runtime dependencies are attached below (\`xflow-agent-linux-amd64\`, \`xflow-agent-linux-arm64\`).
 `;
 
 fs.writeFileSync('RELEASE_BODY.md', body, 'utf8');

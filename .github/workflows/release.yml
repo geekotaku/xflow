@@ -31,27 +31,7 @@ jobs:
           echo "tag=${TAG_NAME}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
-      # 1. Build & Package xflow Server
-      - name: Build & Package xflow Server
-        run: |
-          npm ci
-          npm run build
-          VERSION="${{ steps.version.outputs.version }}"
-          # Create archive with prebuilt dist, frontend static assets, configs and scripts
-          tar -czf "xflow-${VERSION}.tar.gz" \
-            dist/ \
-            public/ \
-            package.json \
-            package-lock.json \
-            docker-compose.yml \
-            Dockerfile \
-            install.sh \
-            install-agent.sh \
-            CHANGELOG.md \
-            README.md \
-            LICENSE
-
-      # 2. Build & Package xflow-agent Standalone Binaries (amd64 & arm64)
+      # 1. Build & Package xflow-agent Standalone Binaries (amd64 & arm64)
       - name: Build & Package xflow-agent binaries
         run: |
           cd agent
@@ -74,14 +54,14 @@ jobs:
           npx postject ../xflow-agent-linux-arm64 NODE_SEA_BLOB dist/sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
           chmod +x ../xflow-agent-linux-arm64
 
-      # 3. Generate Release Notes from CHANGELOG.md
+      # 2. Generate Release Notes from CHANGELOG.md
       - name: Generate Release Body from CHANGELOG.md
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: node .github/scripts/generate-release-notes.js
 
-      # 4. Publish GitHub Release
+      # 3. Publish GitHub Release
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -91,6 +71,5 @@ jobs:
           generate_release_notes: true
           body_path: RELEASE_BODY.md
           files: |
-            xflow-${{ steps.version.outputs.version }}.tar.gz
             xflow-agent-linux-amd64
             xflow-agent-linux-arm64
