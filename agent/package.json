@@ -1,6 +1,6 @@
 {
   "name": "xflow-agent",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Reads Xray-core per-user traffic stats over gRPC and reports deltas to an xflow-collector aggregator, for feeding self-built nodes' usage into Sub-Store.",
   "license": "MIT",
   "repository": {

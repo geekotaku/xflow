@@ -1,6 +1,6 @@
 {
   "name": "xflow",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Aggregates traffic deltas pushed by xflow-agent, stores them in SQLite, and serves a dashboard, a node/token admin page, and a Sub-Store-compatible flow endpoint.",
   "license": "MIT",
   "repository": {

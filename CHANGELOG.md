@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.7] - 2026-09-14
+
 ### 📊 Dashboard & Analytics
 - **Hourly Bar Interactive Drilldown & Breakdown Filter**: Enabled clicking individual hourly bars in the hourly chart view to drill down and filter the traffic distribution below.
   - **Visual Highlight & Dimming**: Selected hour bar stays highlighted with high contrast while non-selected bars gracefully dim to 22% opacity.
