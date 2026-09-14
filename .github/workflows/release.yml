@@ -50,26 +50,29 @@ jobs:
             CHANGELOG.md \
             README.md \
             LICENSE
-          cp "xflow-${VERSION}.tar.gz" "xflow-latest.tar.gz"
 
-      # 2. Build & Package xflow-agent
-      - name: Build & Package xflow-agent
+      # 2. Build & Package xflow-agent Standalone Binaries (amd64 & arm64)
+      - name: Build & Package xflow-agent binaries
         run: |
           cd agent
           npm ci
-          npm run build
-          VERSION="${{ steps.version.outputs.version }}"
-          # Create archive with prebuilt agent dist, proto files, configs and scripts
-          tar -czf "../xflow-agent-${VERSION}.tar.gz" \
-            dist/ \
-            proto/ \
-            package.json \
-            package-lock.json \
-            docker-compose.yml \
-            Dockerfile \
-            install-agent.sh \
-            README.md
-          cp "../xflow-agent-${VERSION}.tar.gz" "../xflow-agent-latest.tar.gz"
+          # 1. Bundle and prepare SEA blob
+          npx esbuild src/index.ts --bundle --platform=node --target=node22 --outfile=dist/bundle.js
+          node --experimental-sea-config sea-config.json
+
+          # 2. Build linux-amd64 binary
+          cp "$(which node)" ../xflow-agent-linux-amd64
+          npx postject ../xflow-agent-linux-amd64 NODE_SEA_BLOB dist/sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
+          chmod +x ../xflow-agent-linux-amd64
+
+          # 3. Build linux-arm64 binary
+          NODE_VERSION="$(node -v)"
+          curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-arm64.tar.gz" -o /tmp/node-arm64.tar.gz
+          tar -xzf /tmp/node-arm64.tar.gz --strip-components=2 -C /tmp "node-${NODE_VERSION}-linux-arm64/bin/node"
+          mv /tmp/node ../xflow-agent-linux-arm64
+          rm -f /tmp/node-arm64.tar.gz
+          npx postject ../xflow-agent-linux-arm64 NODE_SEA_BLOB dist/sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
+          chmod +x ../xflow-agent-linux-arm64
 
       # 3. Generate Release Notes from CHANGELOG.md
       - name: Generate Release Body from CHANGELOG.md
@@ -89,6 +92,5 @@ jobs:
           body_path: RELEASE_BODY.md
           files: |
             xflow-${{ steps.version.outputs.version }}.tar.gz
-            xflow-latest.tar.gz
-            xflow-agent-${{ steps.version.outputs.version }}.tar.gz
-            xflow-agent-latest.tar.gz
+            xflow-agent-linux-amd64
+            xflow-agent-linux-arm64

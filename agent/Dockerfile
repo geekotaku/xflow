@@ -6,15 +6,15 @@ RUN npm install
 COPY tsconfig.json ./
 COPY proto ./proto
 COPY src ./src
-RUN npm run build
+COPY scripts ./scripts
+COPY sea-config.json ./
+RUN npm run build:sea
 
 # --- runtime stage ---
-FROM node:22-alpine AS runtime
+FROM alpine:3.20 AS runtime
+RUN apk add --no-cache libstdc++
 WORKDIR /app
-ENV NODE_ENV=production
-COPY package.json package-lock.json* ./
-RUN npm install --omit=dev && npm cache clean --force
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/proto ./proto
+COPY --from=build /app/dist/xflow-agent /usr/local/bin/xflow-agent
 
-ENTRYPOINT ["node", "dist/index.js"]
+ENTRYPOINT ["xflow-agent"]
+

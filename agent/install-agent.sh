@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # xflow-agent - One-Click Installer for Linux (systemd)
+# Pure Standalone Binary (Single Executable Application - No Node.js required)
 # https://github.com/geekotaku/xflow
 # ==============================================================================
 
@@ -18,7 +19,7 @@ INSTALL_DIR="/opt/xflow-agent"
 SERVICE_NAME="xflow-agent"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 ENV_FILE="${INSTALL_DIR}/xflow-agent.env"
-REPO_URL="https://github.com/geekotaku/xflow.git"
+BINARY_PATH="${INSTALL_DIR}/xflow-agent"
 
 info()    { echo -e "${CYAN}[INFO]${NC} $*"; }
 success() { echo -e "${GREEN}[SUCCESS]${NC} $*"; }
@@ -62,7 +63,7 @@ cat << "EOF"
    /  \  |  _|| || (_) |\ V  V /|____| (_| || (_| ||  __/| | | | | |_ 
   /_/\_\ |_|  |_| \___/  \_/\_/       \__,_| \__, | \___||_| |_|  \__|
                                              |___/                    
-  Xray Traffic Reporting Agent (Native systemd)
+  Xray Traffic Reporting Agent (Standalone Binary)
 EOF
 echo -e "${NC}"
 
@@ -135,6 +136,7 @@ if [ "$DO_UNINSTALL" = true ]; then
     if [ -d "${INSTALL_DIR}" ]; then
         rm -rf "${INSTALL_DIR}"
     fi
+    rm -f /usr/local/bin/xflow-agent
     success "xflow-agent has been completely uninstalled."
     exit 0
 fi
@@ -168,109 +170,84 @@ if [ -t 0 ] && [ -z "${NODE_NAME}" ]; then
     NODE_NAME="${INPUT_NODE:-$NODE_NAME}"
 fi
 
-# 3. Check and Install Node.js
-install_nodejs() {
-    if command -v node >/dev/null 2>&1; then
-        NODE_VER=$(node -v 2>/dev/null | sed -E 's/^v//' | cut -d. -f1)
-        if [ "${NODE_VER}" -ge 18 ]; then
-            info "Node.js $(node -v) is already installed."
-            return 0
-        fi
-        warn "Detected Node.js $(node -v) which is older than v18."
-    fi
-
-    info "Installing Node.js (v20 LTS)..."
-    if [ -f /etc/debian_version ] || command -v apt-get >/dev/null 2>&1; then
-        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-        apt-get update -y && apt-get install -y nodejs
-    elif [ -f /etc/redhat-release ] || command -v yum >/dev/null 2>&1; then
-        curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
-        yum install -y nodejs
-    elif [ -f /etc/alpine-release ] || command -v apk >/dev/null 2>&1; then
-        apk add --no-cache nodejs npm
-    elif [ -f /etc/arch-release ] || command -v pacman >/dev/null 2>&1; then
-        pacman -Sy --noconfirm nodejs npm
-    else
-        error "Automatic Node.js installation is not supported on this OS. Please install Node.js >= 18 manually."
+# 3. Detect System Architecture & Acquire Standalone Binary
+ARCH="$(uname -m)"
+case "${ARCH}" in
+    x86_64|amd64) TARGET_ARCH="amd64" ;;
+    aarch64|arm64) TARGET_ARCH="arm64" ;;
+    *)
+        error "Unsupported architecture: ${ARCH}. xflow-agent binary supports amd64 (x86_64) and arm64."
         exit 1
-    fi
-}
+        ;;
+esac
 
-install_nodejs
-NODE_BIN="$(command -v node)"
-
-if [ -z "${NODE_BIN}" ]; then
-    error "Node.js executable could not be found."
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+if [ "${OS}" != "linux" ]; then
+    error "Unsupported OS: ${OS}. This script only supports Linux."
     exit 1
 fi
 
-# 4. Setup Installation Directory
-info "Setting up agent in ${INSTALL_DIR}..."
 mkdir -p "${INSTALL_DIR}"
 
-# Determine source
-if [ -f "./package.json" ] && grep -q '"name": "xflow-agent"' "./package.json" 2>/dev/null; then
-    # Running directly from agent source directory
-    info "Copying local agent files..."
-    cp -r ./* "${INSTALL_DIR}/"
-elif [ -f "./agent/package.json" ]; then
-    # Running from root directory of xflow repository
-    info "Copying agent files from ./agent..."
-    cp -r ./agent/* "${INSTALL_DIR}/"
-else
-    # Running via remote curl | bash
-    # Try downloading latest release package first
-    DOWNLOADED=false
-    info "Fetching latest agent release package..."
-    RELEASE_URL=$(curl -fsSL --max-time 5 https://api.github.com/repos/geekotaku/xflow/releases/latest 2>/dev/null | grep -o 'https://[^"]*xflow-agent-[^"]*\.tar\.gz' | head -n 1 || true)
-    
-    if [ -n "${RELEASE_URL}" ]; then
-        if curl -fsSL "${RELEASE_URL}" -o /tmp/xflow-agent.tar.gz; then
-            tar -xzf /tmp/xflow-agent.tar.gz -C "${INSTALL_DIR}"
-            rm -f /tmp/xflow-agent.tar.gz
-            DOWNLOADED=true
-            info "Release package downloaded and extracted."
-        fi
+FOUND_BINARY=false
+
+# Check local binaries first (in case running from built workspace or manual placement)
+for candidate in "./dist/xflow-agent-linux-${TARGET_ARCH}" "./xflow-agent-linux-${TARGET_ARCH}" "./dist/xflow-agent" "./xflow-agent" "./agent/dist/xflow-agent"; do
+    if [ -f "${candidate}" ]; then
+        info "Found local standalone binary: ${candidate}"
+        cp -f "${candidate}" "${BINARY_PATH}"
+        chmod +x "${BINARY_PATH}"
+        FOUND_BINARY=true
+        break
+    fi
+done
+
+# If not local, download precompiled binary
+if [ "$FOUND_BINARY" = false ]; then
+    BIN_NAME="xflow-agent-linux-${TARGET_ARCH}"
+    info "Downloading standalone binary (${BIN_NAME})..."
+
+    # 1. Try server endpoint
+    if curl -fsSL --max-time 15 "${SERVER_URL}/${BIN_NAME}" -o "${BINARY_PATH}" 2>/dev/null && [ -s "${BINARY_PATH}" ]; then
+        chmod +x "${BINARY_PATH}"
+        FOUND_BINARY=true
+        info "Downloaded standalone binary from xflow server: ${BIN_NAME}"
+    elif curl -fsSL --max-time 15 "${SERVER_URL}/xflow-agent" -o "${BINARY_PATH}" 2>/dev/null && [ -s "${BINARY_PATH}" ]; then
+        chmod +x "${BINARY_PATH}"
+        FOUND_BINARY=true
+        info "Downloaded standalone binary from xflow server: xflow-agent"
     fi
 
-    if [ "$DOWNLOADED" = false ]; then
-        info "Cloning xflow repository (shallow clone)..."
-        TEMP_DIR=$(mktemp -d)
-        if ! command -v git >/dev/null 2>&1; then
-            if command -v apt-get >/dev/null 2>&1; then
-                apt-get update -y && apt-get install -y git
-            elif command -v yum >/dev/null 2>&1; then
-                yum install -y git
-            elif command -v apk >/dev/null 2>&1; then
-                apk add git
-            fi
+    # 2. Try GitHub Releases
+    if [ "$FOUND_BINARY" = false ]; then
+        GH_RELEASE_URL="https://github.com/geekotaku/xflow/releases/latest/download/${BIN_NAME}"
+        info "Attempting download from GitHub Releases: ${GH_RELEASE_URL}..."
+        if curl -fsSL --max-time 20 "${GH_RELEASE_URL}" -o "${BINARY_PATH}" 2>/dev/null && [ -s "${BINARY_PATH}" ]; then
+            chmod +x "${BINARY_PATH}"
+            FOUND_BINARY=true
+            info "Downloaded standalone binary from GitHub Releases (${BIN_NAME})."
         fi
-        git clone --depth 1 "${REPO_URL}" "${TEMP_DIR}"
-        cp -r "${TEMP_DIR}/agent/"* "${INSTALL_DIR}/"
-        rm -rf "${TEMP_DIR}"
     fi
 fi
 
-# Copy install-agent.sh into INSTALL_DIR for easy management/uninstallation
+if [ "$FOUND_BINARY" = false ] || [ ! -x "${BINARY_PATH}" ]; then
+    error "Failed to acquire xflow-agent standalone binary."
+    echo ""
+    echo "Please ensure the binary is either:"
+    echo "  1. Available on your xflow server at: ${SERVER_URL}/${BIN_NAME}"
+    echo "  2. Published in GitHub Releases as: ${BIN_NAME}"
+    echo "  3. Manually placed in ${BINARY_PATH} or current directory"
+    exit 1
+fi
+
+# Link binary to /usr/local/bin for global CLI access
+ln -sf "${BINARY_PATH}" /usr/local/bin/xflow-agent
+
+# Copy installer into INSTALL_DIR for subsequent management / uninstallation
 cp -f "$0" "${INSTALL_DIR}/install-agent.sh" 2>/dev/null || true
 chmod +x "${INSTALL_DIR}/install-agent.sh" 2>/dev/null || true
 
-cd "${INSTALL_DIR}"
-
-# 5. Build / Install Dependencies
-if [ ! -f "${INSTALL_DIR}/dist/index.js" ]; then
-    info "Building agent from source..."
-    npm install
-    npm run build
-    npm prune --omit=dev
-else
-    if [ ! -d "${INSTALL_DIR}/node_modules/@grpc/grpc-js" ]; then
-        info "Installing production dependencies..."
-        npm install --omit=dev --no-audit --no-fund
-    fi
-fi
-
-# 6. Generate Environment Configuration File
+# 4. Generate Environment Configuration File
 info "Generating configuration file at ${ENV_FILE}..."
 cat > "${ENV_FILE}" << EOF
 # xflow-agent configuration
@@ -284,7 +261,7 @@ STATE_FILE=${INSTALL_DIR}/.xflow-state.json
 EOF
 chmod 600 "${ENV_FILE}"
 
-# 7. Configure systemd Service
+# 5. Configure systemd Service
 info "Configuring systemd service ${SERVICE_NAME}..."
 cat > "${SERVICE_FILE}" << EOF
 [Unit]
@@ -298,7 +275,7 @@ Type=simple
 User=root
 WorkingDirectory=${INSTALL_DIR}
 EnvironmentFile=${ENV_FILE}
-ExecStart=${NODE_BIN} ${INSTALL_DIR}/dist/index.js
+ExecStart=${BINARY_PATH}
 Restart=always
 RestartSec=10s
 StandardOutput=journal
@@ -312,7 +289,7 @@ EOF
 systemctl daemon-reload
 systemctl enable --now "${SERVICE_NAME}"
 
-# 8. Check Service Status
+# 6. Check Service Status
 sleep 1
 if systemctl is-active --quiet "${SERVICE_NAME}"; then
     echo ""
@@ -334,6 +311,7 @@ echo -e "  ${BOLD}Report Interval:${NC} ${INTERVAL} min"
 echo -e "  ${BOLD}Xray API:${NC}        ${API_ADDR}"
 echo -e "  ${BOLD}Tracked Users:${NC}   ${USERS:-All users on node}"
 echo -e "  ${BOLD}Config File:${NC}     ${ENV_FILE}"
+echo -e "  ${BOLD}Binary Location:${NC} ${BINARY_PATH}"
 echo ""
 echo -e "${BOLD}Management Commands:${NC}"
 echo -e "  View Status:        ${CYAN}systemctl status ${SERVICE_NAME}${NC}"

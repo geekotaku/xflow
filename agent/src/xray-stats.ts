@@ -1,7 +1,8 @@
-import path from "path";
 import { promisify } from "util";
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
+import * as protobuf from "protobufjs";
+import commandProto from "./proto/command";
 
 export interface Stat {
   name: string;
@@ -17,10 +18,9 @@ export interface StatsServiceClient extends grpc.Client {
   QueryStats: QueryStatsFn;
 }
 
-// proto-loader parses the .proto file synchronously at require-time — no
-// codegen step, no build-time protoc dependency.
-const PROTO_PATH = path.join(__dirname, "../proto/command.proto");
-const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
+// Parse inlined command.proto text directly in memory — no runtime filesystem dependency
+const parsedProto = protobuf.parse(commandProto);
+const packageDefinition = protoLoader.fromJSON(parsedProto.root.toJSON(), {
   keepCase: true,
   longs: String,
   enums: String,

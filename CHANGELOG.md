@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🚀 Standalone Agent & Deployment
+- **Single Executable Application (SEA)**: Added standalone native binary builds for `xflow-agent` using Node.js SEA and esbuild, packaging all dependencies and Protobuf schemas into self-contained executables with zero runtime dependencies.
+- **Dual-Architecture Release Binaries**: Enhanced release workflow to produce standalone `xflow-agent-linux-amd64` and `xflow-agent-linux-arm64` binaries, matching multi-architecture container releases.
+- **Streamlined Pure-Binary Installer**: Refactored `install-agent.sh` to install standalone binaries directly with native systemd service configuration, eliminating host Node.js, npm, and Git requirements.
+- **Minimal Agent Docker Image**: Migrated `agent/Dockerfile` to a multi-stage SEA build, deploying a pure `alpine:3.20` runtime with `libstdc++` only.
+
 ### 📊 Dashboard & Analytics
 - **Dual-Perspective Traffic Breakdown Matrix (By User / By Node)**: Integrated an interactive breakdown matrix directly inside the main chart card with seamless theme matching and clean divider styling.
   - In **By Node** mode, presents "Node Breakdown" displaying users per node with traffic volumes, proportional share, and colored progress bars.
