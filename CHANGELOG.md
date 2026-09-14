@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 📊 Dashboard & Analytics
+- **Hourly Bar Interactive Drilldown & Breakdown Filter**: Enabled clicking individual hourly bars in the hourly chart view to drill down and filter the traffic distribution below.
+  - **Visual Highlight & Dimming**: Selected hour bar stays highlighted with high contrast while non-selected bars gracefully dim to 22% opacity.
+  - **Multi-View Distribution Filtering**: The breakdown matrix (User Breakdown, Node Breakdown, and Total Rankings) dynamically recalculates and displays volumes, proportional shares, and progress bars strictly within the selected hour window.
+  - **Synchronized Details Table**: The paginated raw traffic records table ("Show Details") synchronizes with the selected hour filter, displaying only events recorded within that 60-minute window.
+  - **Status Badges & Quick Reset**: Dynamic time capsule badges (e.g., `🕒 Sep 12 09:00 ×`) appear above both the breakdown matrix and the records table. Re-clicking the selected bar or clicking either `×` button instantly restores full-day statistics.
+- **High-Performance In-Memory Aggregation**: Enhanced `/api/stats` endpoint with time-series user×node breakdowns (`byTimeUserNode`), enabling instant zero-latency client-side recalculation without repeated network requests.
+- **Clean HTML & Internationalization**: Sanitized initial DOM markup across dashboard HTML to pure English, eliminating hardcoded Chinese text and ensuring language switching handles dynamic translation cleanly.
+
+### 🌐 Network & Asset Delivery
+- **China-Accessible Font CDN**: Migrated Google Fonts dependencies to jsDelivr-hosted `@fontsource/inter` CDN (`https://cdn.jsdelivr.net/npm/@fontsource/inter@5/index.css`) across both Dashboard and Admin pages, ensuring fast font rendering without network restrictions in mainland China.
+
+### ⚙️ CI/CD & Build Workflows
+- **GitHub Actions Modernization**: Upgraded GitHub Actions runners and workflows (Node.js 24 runtime, `actions/checkout@v4`, `docker/build-push-action@v6`, and related actions) to resolve Node.js 20 runner deprecation warnings.
+
 ## [1.0.6] - 2026-09-14
 
 ### 🚀 Standalone Agent & Deployment

@@ -111,6 +111,15 @@ export interface TimeSeriesTotalStats {
   total: number;
 }
 
+export interface TimeSeriesUserNodeStats {
+  bucket: string;
+  user: string;
+  node: string;
+  uplink: number;
+  downlink: number;
+  total: number;
+}
+
 export interface StatsResponse {
   range: {
     start: string;
@@ -124,6 +133,7 @@ export interface StatsResponse {
   byTimeUser: TimeSeriesUserStats[];
   byTimeNode: TimeSeriesNodeStats[];
   byTimeTotal: TimeSeriesTotalStats[];
+  byTimeUserNode?: TimeSeriesUserNodeStats[];
 }
 
 export interface StatsMetaResponse {

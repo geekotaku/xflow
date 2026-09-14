@@ -36,6 +36,10 @@ const I18N = {
     downlink:   '下行',
     drilldownBack: '返回日视图',
     drilldownHint: '💡 点击柱状图下钻按小时查看',
+    drilldownHourHint: '💡 点击柱子筛选下方分布明细',
+    drilldownHourActiveHint: '💡 点击取消时段筛选',
+    clearHourFilter: '清除时段筛选',
+    detailsTableTitle: '流量明细记录',
     labelPresets:    '快捷筛选',
     presetToday:     '今日',
     presetLast7:     '近 7 天',
@@ -102,6 +106,10 @@ const I18N = {
     downlink:   'Download',
     drilldownBack: 'Back to Daily',
     drilldownHint: '💡 Click bar to view hourly detail',
+    drilldownHourHint: '💡 Click bar to filter breakdown below',
+    drilldownHourActiveHint: '💡 Click to clear hour filter',
+    clearHourFilter: 'Clear hour filter',
+    detailsTableTitle: 'Traffic Detail Records',
     labelPresets:    'Quick Range',
     presetToday:     'Today',
     presetLast7:     'Last 7 Days',
@@ -142,6 +150,7 @@ let currentView     = 'user'; // 'user' | 'node' | 'total'
 let cachedStatsData = null;
 let chart           = null;
 let drilldownState  = null;
+let selectedHourBucket = null;
 let recordsPage     = 1;
 let recordsPageSize = 10;
 let recordsTotal    = 0;
@@ -199,6 +208,28 @@ const PALETTE = [
 
 function getColor(index) {
   return PALETTE[index % PALETTE.length];
+}
+
+function hexToRgba(hex, alpha) {
+  if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) return hex;
+  let c = hex.slice(1);
+  if (c.length === 3) c = c.split('').map(x => x + x).join('');
+  const num = parseInt(c, 16);
+  if (isNaN(num)) return hex;
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function getBarColor(baseColor, bucketIndex, buckets) {
+  if (!selectedHourBucket) return baseColor;
+  return buckets[bucketIndex] === selectedHourBucket ? baseColor : hexToRgba(baseColor, 0.22);
+}
+
+function getBarBorderColor(baseColor, bucketIndex, buckets) {
+  if (!selectedHourBucket) return 'transparent';
+  return buckets[bucketIndex] === selectedHourBucket ? baseColor : 'transparent';
 }
 
 // ── Dropdown helper ──────────────────────────────────────────────
@@ -318,6 +349,13 @@ function applyLang(lang) {
   setTxt('kpiLabelToday',   'kpiToday');
   setTxt('kpiLabelUsers',   'kpiUsers');
   setTxt('kpiLabelNodes',   'kpiNodes');
+
+  const clearBtn = document.getElementById('breakdownHourClear');
+  if (clearBtn) clearBtn.setAttribute('title', t('clearHourFilter'));
+
+  setTxt('tableTitleText', 'detailsTableTitle');
+  const tableClearBtn = document.getElementById('tableHourClear');
+  if (tableClearBtn) tableClearBtn.setAttribute('title', t('clearHourFilter'));
 
   const pageSizeSel = document.getElementById('pageSizeSelect');
   if (pageSizeSel) {
@@ -466,14 +504,23 @@ function renderChart(data) {
       if (!lookup[r.bucket]) lookup[r.bucket] = {};
       lookup[r.bucket][r.user] = r.total;
     }
-    datasets = users.map((user, idx) => ({
-      label: user,
-      data: buckets.map(b => lookup[b]?.[user] ?? 0),
-      backgroundColor: getColor(idx),
-      stack: 'traffic',
-      borderRadius: 3,
-      borderSkipped: false,
-    }));
+    datasets = users.map((user, idx) => {
+      const color = getColor(idx);
+      return {
+        label: user,
+        data: buckets.map(b => lookup[b]?.[user] ?? 0),
+        backgroundColor: hourly && selectedHourBucket
+          ? buckets.map((b, bIdx) => getBarColor(color, bIdx, buckets))
+          : color,
+        borderColor: hourly && selectedHourBucket
+          ? buckets.map((b, bIdx) => getBarBorderColor(color, bIdx, buckets))
+          : undefined,
+        borderWidth: hourly && selectedHourBucket ? 1.5 : 0,
+        stack: 'traffic',
+        borderRadius: 3,
+        borderSkipped: false,
+      };
+    });
   } else if (currentView === 'node') {
     const nodes = [...new Set(byTimeNode.map(r => r.node))];
     const lookup = {};
@@ -481,25 +528,42 @@ function renderChart(data) {
       if (!lookup[r.bucket]) lookup[r.bucket] = {};
       lookup[r.bucket][r.node] = r.total;
     }
-    datasets = nodes.map((node, idx) => ({
-      label: node,
-      data: buckets.map(b => lookup[b]?.[node] ?? 0),
-      backgroundColor: getColor(idx),
-      stack: 'traffic',
-      borderRadius: 3,
-      borderSkipped: false,
-    }));
+    datasets = nodes.map((node, idx) => {
+      const color = getColor(idx);
+      return {
+        label: node,
+        data: buckets.map(b => lookup[b]?.[node] ?? 0),
+        backgroundColor: hourly && selectedHourBucket
+          ? buckets.map((b, bIdx) => getBarColor(color, bIdx, buckets))
+          : color,
+        borderColor: hourly && selectedHourBucket
+          ? buckets.map((b, bIdx) => getBarBorderColor(color, bIdx, buckets))
+          : undefined,
+        borderWidth: hourly && selectedHourBucket ? 1.5 : 0,
+        stack: 'traffic',
+        borderRadius: 3,
+        borderSkipped: false,
+      };
+    });
   } else {
     // Total: Uplink and Downlink breakdown
     const lookup = {};
     for (const r of byTimeTotal) {
       lookup[r.bucket] = r;
     }
+    const upColor = '#38bdf8';
+    const downColor = '#6366f1';
     datasets = [
       {
         label: t('uplink'),
         data: buckets.map(b => lookup[b]?.uplink ?? 0),
-        backgroundColor: '#38bdf8',
+        backgroundColor: hourly && selectedHourBucket
+          ? buckets.map((b, bIdx) => getBarColor(upColor, bIdx, buckets))
+          : upColor,
+        borderColor: hourly && selectedHourBucket
+          ? buckets.map((b, bIdx) => getBarBorderColor(upColor, bIdx, buckets))
+          : undefined,
+        borderWidth: hourly && selectedHourBucket ? 1.5 : 0,
         stack: 'traffic',
         borderRadius: 3,
         borderSkipped: false,
@@ -507,7 +571,13 @@ function renderChart(data) {
       {
         label: t('downlink'),
         data: buckets.map(b => lookup[b]?.downlink ?? 0),
-        backgroundColor: '#6366f1',
+        backgroundColor: hourly && selectedHourBucket
+          ? buckets.map((b, bIdx) => getBarColor(downColor, bIdx, buckets))
+          : downColor,
+        borderColor: hourly && selectedHourBucket
+          ? buckets.map((b, bIdx) => getBarBorderColor(downColor, bIdx, buckets))
+          : undefined,
+        borderWidth: hourly && selectedHourBucket ? 1.5 : 0,
         stack: 'traffic',
         borderRadius: 3,
         borderSkipped: false,
@@ -529,25 +599,36 @@ function renderChart(data) {
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       onClick: (event, elements, chartInstance) => {
-        if (hourly) return;
         const pts = (elements && elements.length)
           ? elements
           : chartInstance.getElementsAtEventForMode(event.native, 'index', { intersect: false }, true);
         if (!pts || !pts.length) return;
         const idx = pts[0].index;
         const clickedBucket = buckets[idx];
-        if (clickedBucket) {
+        if (!clickedBucket) return;
+
+        if (!hourly) {
           drillDownToDate(clickedBucket);
+        } else {
+          // Toggle selection on clicked hour
+          if (selectedHourBucket === clickedBucket) {
+            clearHourFilter();
+          } else {
+            selectedHourBucket = clickedBucket;
+            if (cachedStatsData) {
+              renderChart(cachedStatsData);
+              renderBreakdownCards(cachedStatsData);
+            }
+            if (showDetails) {
+              loadRecords(1);
+            }
+          }
         }
       },
       onHover: (event, elements) => {
         const target = event?.native?.target;
         if (!target) return;
-        if (!hourly) {
-          target.style.cursor = (elements && elements.length) ? 'pointer' : 'default';
-        } else {
-          target.style.cursor = 'default';
-        }
+        target.style.cursor = (elements && elements.length) ? 'pointer' : 'default';
       },
       scales: {
         x: {
@@ -590,7 +671,14 @@ function renderChart(data) {
             label:  ctx   => `${ctx.dataset.label}: ${formatBytes(ctx.raw)}`,
             footer: items => {
               const total = `Total: ${formatBytes(items.reduce((s, i) => s + i.raw, 0))}`;
-              return !hourly ? `${total}\n${t('drilldownHint')}` : total;
+              if (!hourly) {
+                return `${total}\n${t('drilldownHint')}`;
+              }
+              const bucket = buckets[items[0]?.dataIndex];
+              if (selectedHourBucket && selectedHourBucket === bucket) {
+                return `${total}\n${t('drilldownHourActiveHint')}`;
+              }
+              return `${total}\n${t('drilldownHourHint')}`;
             },
           },
         },
@@ -628,15 +716,54 @@ function renderBreakdownCards(data) {
   const subEl = document.getElementById('breakdownSubtitle');
   const badgeEl = document.getElementById('breakdownCountBadge');
   const emptyEl = document.getElementById('breakdownEmpty');
+  const hourBadgeEl = document.getElementById('breakdownHourBadge');
+  const hourTextEl = document.getElementById('breakdownHourText');
 
   if (!data) {
     gridEl.innerHTML = '';
     if (emptyEl) emptyEl.style.display = 'block';
     if (badgeEl) badgeEl.textContent = '';
+    if (hourBadgeEl) hourBadgeEl.style.display = 'none';
     return;
   }
 
-  const { byUserNode = [], byNode = [], byUser = [] } = data;
+  // Handle hourly filtering
+  let byUserNode = data.byUserNode || [];
+  let byNode = data.byNode || [];
+  let byUser = data.byUser || [];
+
+  if (selectedHourBucket && data.byTimeUserNode) {
+    byUserNode = data.byTimeUserNode.filter(r => r.bucket === selectedHourBucket);
+
+    const nodeAgg = new Map();
+    const userAgg = new Map();
+    for (const r of byUserNode) {
+      if (!nodeAgg.has(r.node)) {
+        nodeAgg.set(r.node, { node: r.node, uplink: 0, downlink: 0, total: 0 });
+      }
+      const n = nodeAgg.get(r.node);
+      n.uplink += r.uplink || 0;
+      n.downlink += r.downlink || 0;
+      n.total += (r.uplink || 0) + (r.downlink || 0);
+
+      if (!userAgg.has(r.user)) {
+        userAgg.set(r.user, { user: r.user, uplink: 0, downlink: 0, total: 0 });
+      }
+      const u = userAgg.get(r.user);
+      u.uplink += r.uplink || 0;
+      u.downlink += r.downlink || 0;
+      u.total += (r.uplink || 0) + (r.downlink || 0);
+    }
+    byNode = [...nodeAgg.values()];
+    byUser = [...userAgg.values()];
+
+    if (hourBadgeEl) {
+      hourBadgeEl.style.display = 'inline-flex';
+      if (hourTextEl) hourTextEl.textContent = formatBucket(selectedHourBucket, true);
+    }
+  } else {
+    if (hourBadgeEl) hourBadgeEl.style.display = 'none';
+  }
 
   // Compute total traffic across all entries
   let totalAll = 0;
@@ -1024,6 +1151,29 @@ document.getElementById('breakdownGrid')?.addEventListener('click', e => {
   }
 });
 
+function clearHourFilter() {
+  selectedHourBucket = null;
+  const tableHourBadge = document.getElementById('tableHourBadge');
+  if (tableHourBadge) tableHourBadge.style.display = 'none';
+  if (cachedStatsData) {
+    renderChart(cachedStatsData);
+    renderBreakdownCards(cachedStatsData);
+  }
+  if (showDetails) {
+    loadRecords(1);
+  }
+}
+
+document.getElementById('breakdownHourClear')?.addEventListener('click', e => {
+  e.stopPropagation();
+  clearHourFilter();
+});
+
+document.getElementById('tableHourClear')?.addEventListener('click', e => {
+  e.stopPropagation();
+  clearHourFilter();
+});
+
 // ── View switch handler ──────────────────────────────────────────
 document.getElementById('viewSwitch')?.addEventListener('click', e => {
   const btn = e.target.closest('.view-btn');
@@ -1094,8 +1244,44 @@ function handleJumpPage() {
 // ── Records table (paginated) ────────────────────────────────────
 async function loadRecords(page = 1) {
   recordsPage = page;
-  const q = buildQuery();
-  const res = await fetch(`/api/stats/records?${q}&page=${page}&limit=${recordsPageSize}`);
+  const p = new URLSearchParams();
+  if (userFilter.value) p.set('user', userFilter.value);
+  if (nodeFilter.value) p.set('node', nodeFilter.value);
+
+  if (selectedHourBucket) {
+    const [datePart, hourPart] = selectedHourBucket.split('T');
+    const [y, m, d] = datePart.split('-').map(Number);
+    const h = Number(hourPart);
+    const startHour = new Date(y, m - 1, d, h, 0, 0, 0);
+    const endHour = new Date(y, m - 1, d, h, 59, 59, 999);
+    p.set('start', startHour.toISOString());
+    p.set('end', endHour.toISOString());
+  } else {
+    if (startDate.value) {
+      const [y, m, d] = startDate.value.split('-').map(Number);
+      const start = new Date(y, m - 1, d, 0, 0, 0, 0);
+      p.set('start', start.toISOString());
+    }
+    if (endDate.value) {
+      const [y, m, d] = endDate.value.split('-').map(Number);
+      const end = new Date(y, m - 1, d, 23, 59, 59, 999);
+      p.set('end', end.toISOString());
+    }
+  }
+  p.set('tz', String(-new Date().getTimezoneOffset()));
+
+  const tableHourBadge = document.getElementById('tableHourBadge');
+  const tableHourText = document.getElementById('tableHourText');
+  if (tableHourBadge) {
+    if (selectedHourBucket) {
+      tableHourBadge.style.display = 'inline-flex';
+      if (tableHourText) tableHourText.textContent = formatBucket(selectedHourBucket, true);
+    } else {
+      tableHourBadge.style.display = 'none';
+    }
+  }
+
+  const res = await fetch(`/api/stats/records?${p.toString()}&page=${page}&limit=${recordsPageSize}`);
   const data = await res.json();
 
   recordsTotal = data.total || 0;
@@ -1207,6 +1393,10 @@ async function refresh() {
   const data = await res.json();
   cachedStatsData = data;
 
+  if (selectedHourBucket && data.byTimeTotal && !data.byTimeTotal.some(r => r.bucket === selectedHourBucket)) {
+    selectedHourBucket = null;
+  }
+
   const hasData = (data.byTimeTotal && data.byTimeTotal.length > 0)
     || (data.byTimeUser && data.byTimeUser.length > 0)
     || (data.byUser && data.byUser.length > 0);
@@ -1282,6 +1472,7 @@ function applyPreset(presetKey) {
   updatePresetActiveState();
 
   drilldownState = null;
+  selectedHourBucket = null;
   const backBtn = document.getElementById('drilldownBackBtn');
   if (backBtn) backBtn.style.display = 'none';
   recordsPage = 1;
@@ -1310,6 +1501,7 @@ startDate.addEventListener('change', () => {
     endDate.value = startDate.value;
   }
   drilldownState = null;
+  selectedHourBucket = null;
   const backBtn = document.getElementById('drilldownBackBtn');
   if (backBtn) backBtn.style.display = 'none';
   recordsPage = 1;
@@ -1322,6 +1514,7 @@ endDate.addEventListener('change', () => {
     startDate.value = endDate.value;
   }
   drilldownState = null;
+  selectedHourBucket = null;
   const backBtn = document.getElementById('drilldownBackBtn');
   if (backBtn) backBtn.style.display = 'none';
   recordsPage = 1;
@@ -1338,6 +1531,7 @@ function drillDownToDate(dateStr) {
   }
   startDate.value = dateStr;
   endDate.value = dateStr;
+  selectedHourBucket = null;
   const backBtn = document.getElementById('drilldownBackBtn');
   if (backBtn) backBtn.style.display = 'inline-flex';
   recordsPage = 1;
@@ -1351,6 +1545,7 @@ function exitDrillDown() {
     endDate.value = drilldownState.endDate;
     drilldownState = null;
   }
+  selectedHourBucket = null;
   const backBtn = document.getElementById('drilldownBackBtn');
   if (backBtn) backBtn.style.display = 'none';
   recordsPage = 1;

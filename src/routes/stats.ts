@@ -12,6 +12,7 @@ import type {
   TimeSeriesUserStats,
   TimeSeriesNodeStats,
   TimeSeriesTotalStats,
+  TimeSeriesUserNodeStats,
 } from "../services/types";
 
 const router = Router();
@@ -127,6 +128,18 @@ router.get("/", (req, res) => {
     )
     .all(...params) as TimeSeriesTotalStats[];
 
+  // time-bucket × user × node (for fine-grained hourly/bucket breakdown)
+  const byTimeUserNode = db
+    .prepare(
+      `SELECT ${timeBucket} AS bucket, user, node,
+              SUM(uplink) AS uplink,
+              SUM(downlink) AS downlink,
+              SUM(uplink + downlink) AS total
+       FROM traffic_reports WHERE ${where}
+       GROUP BY bucket, user, node ORDER BY bucket, user, node`,
+    )
+    .all(...params) as TimeSeriesUserNodeStats[];
+
   // ── Summary KPI metrics ───────────────────────────────────────
   // Calculate global summary metrics for top overview cards (unlinked from filters)
   // 1. This Month's global traffic & active users (start of month local client time -> now)
@@ -225,6 +238,7 @@ router.get("/", (req, res) => {
     byTimeUser,
     byTimeNode,
     byTimeTotal,
+    byTimeUserNode,
   };
 
   res.json(response);
