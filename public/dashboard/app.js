@@ -49,6 +49,22 @@ const I18N = {
     kpiNodes:        '在线节点数',
     kpiTotalUsers:   n => `全部登记用户: ${n}`,
     kpiTotalNodes:   n => `全部配置节点: ${n}`,
+    breakdownTitleNode:     '节点用户分布',
+    breakdownSubNode:       '展示各节点内的主要用户流量，点击可快速筛选或取消',
+    breakdownTitleUser:     '用户节点分布',
+    breakdownSubUser:       '展示各用户连接的节点流量分布，点击可快速筛选或取消',
+    breakdownTitleTotal:    '流量分布概览',
+    breakdownSubTotal:      '全网节点与用户消耗排行，点击可快速筛选或取消',
+    breakdownNodeRank:      '节点流量排行',
+    breakdownUserRank:      '用户流量排行',
+    breakdownMore:          count => `展开其余 ${count} 项 ▾`,
+    breakdownCollapse:      '收起 ▴',
+    breakdownEmpty:         '当前范围内无分布数据',
+    nodeBadgeCount:         n => `共 ${n} 个节点`,
+    userBadgeCount:         n => `共 ${n} 位用户`,
+    totalBadgeSummary:      (nodes, users) => `${nodes} 个节点 · ${users} 位用户`,
+    clickToFilterUser:      u => `点击筛选/取消用户: ${u}`,
+    clickToFilterNode:      n => `点击筛选/取消节点: ${n}`,
   },
   en: {
     title:      'Node Traffic Analytics',
@@ -99,6 +115,22 @@ const I18N = {
     kpiNodes:        'Online Nodes',
     kpiTotalUsers:   n => `Total registered: ${n}`,
     kpiTotalNodes:   n => `Total configured: ${n}`,
+    breakdownTitleNode:     'User Breakdown',
+    breakdownSubNode:       'Traffic by users on each node. Click to filter/clear.',
+    breakdownTitleUser:     'Node Breakdown',
+    breakdownSubUser:       'Traffic by nodes for each user. Click to filter/clear.',
+    breakdownTitleTotal:    'Traffic Overview',
+    breakdownSubTotal:      'Top nodes and top users ranking. Click to filter/clear.',
+    breakdownNodeRank:      'Node Ranking',
+    breakdownUserRank:      'User Ranking',
+    breakdownMore:          count => `Show ${count} more ▾`,
+    breakdownCollapse:      'Collapse ▴',
+    breakdownEmpty:         'No breakdown data in selected range',
+    nodeBadgeCount:         n => `${n} nodes`,
+    userBadgeCount:         n => `${n} users`,
+    totalBadgeSummary:      (nodes, users) => `${nodes} nodes · ${users} users`,
+    clickToFilterUser:      u => `Click to filter/clear user: ${u}`,
+    clickToFilterNode:      n => `Click to filter/clear node: ${n}`,
   },
 };
 
@@ -313,6 +345,7 @@ function applyLang(lang) {
 
   if (cachedStatsData) {
     renderChart(cachedStatsData);
+    renderBreakdownCards(cachedStatsData);
     if (cachedStatsData.summary) renderKpis(cachedStatsData.summary);
   }
   if (showDetails) {
@@ -574,6 +607,423 @@ function renderChart(data) {
   }
 }
 
+// ── Breakdown Cards ──────────────────────────────────────────────
+const expandedCards = new Set();
+
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderBreakdownCards(data) {
+  const gridEl = document.getElementById('breakdownGrid');
+  if (!gridEl) return;
+
+  const titleEl = document.getElementById('breakdownTitle');
+  const subEl = document.getElementById('breakdownSubtitle');
+  const badgeEl = document.getElementById('breakdownCountBadge');
+  const emptyEl = document.getElementById('breakdownEmpty');
+
+  if (!data) {
+    gridEl.innerHTML = '';
+    if (emptyEl) emptyEl.style.display = 'block';
+    if (badgeEl) badgeEl.textContent = '';
+    return;
+  }
+
+  const { byUserNode = [], byNode = [], byUser = [] } = data;
+
+  // Compute total traffic across all entries
+  let totalAll = 0;
+  for (const r of byUserNode) {
+    totalAll += (r.uplink || 0) + (r.downlink || 0);
+  }
+  if (totalAll === 0 && byNode.length > 0) {
+    for (const r of byNode) {
+      totalAll += (r.uplink || 0) + (r.downlink || 0);
+    }
+  }
+
+  gridEl.innerHTML = '';
+
+  const activeUser = userFilter?.value;
+  const activeNode = nodeFilter?.value;
+
+  if (currentView === 'node') {
+    if (titleEl) titleEl.textContent = t('breakdownTitleNode');
+    if (subEl) subEl.textContent = t('breakdownSubNode');
+
+    // Aggregate by node
+    const nodeMap = new Map();
+    for (const r of byUserNode) {
+      const rowTotal = (r.uplink || 0) + (r.downlink || 0);
+      if (!nodeMap.has(r.node)) {
+        nodeMap.set(r.node, { node: r.node, total: 0, uplink: 0, downlink: 0, users: [] });
+      }
+      const item = nodeMap.get(r.node);
+      item.total += rowTotal;
+      item.uplink += (r.uplink || 0);
+      item.downlink += (r.downlink || 0);
+      item.users.push({
+        user: r.user,
+        total: rowTotal,
+        uplink: r.uplink || 0,
+        downlink: r.downlink || 0,
+      });
+    }
+
+    for (const n of byNode) {
+      if (!nodeMap.has(n.node)) {
+        nodeMap.set(n.node, {
+          node: n.node,
+          total: (n.uplink || 0) + (n.downlink || 0),
+          uplink: n.uplink || 0,
+          downlink: n.downlink || 0,
+          users: [],
+        });
+      }
+    }
+
+    const nodeList = [...nodeMap.values()].sort((a, b) => b.total - a.total);
+    if (badgeEl) badgeEl.textContent = t('nodeBadgeCount', nodeList.length);
+
+    if (nodeList.length === 0 || totalAll === 0) {
+      if (emptyEl) emptyEl.style.display = 'block';
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    const serverIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="breakdown-icon"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
+
+    nodeList.forEach((item, nodeIdx) => {
+      item.users.sort((a, b) => b.total - a.total);
+      const cardId = `node:${item.node}`;
+      const isExpanded = expandedCards.has(cardId);
+      const visibleUsers = isExpanded ? item.users : item.users.slice(0, 4);
+      const hasMore = item.users.length > 4;
+
+      const nodeShare = totalAll > 0 ? ((item.total / totalAll) * 100).toFixed(1) : '0.0';
+
+      const card = document.createElement('div');
+      card.className = `breakdown-item-card${activeNode === item.node ? ' active-filter' : ''}`;
+
+      let usersHtml = '';
+      visibleUsers.forEach((u, uIdx) => {
+        const uPct = item.total > 0 ? ((u.total / item.total) * 100).toFixed(1) : '0.0';
+        const color = getColor(uIdx);
+        const isActive = activeUser === u.user;
+        usersHtml += `
+          <div class="breakdown-subitem${isActive ? ' active-filter' : ''}" data-filter-user="${escapeHtml(u.user)}" title="${t('clickToFilterUser', u.user)}">
+            <div class="breakdown-subitem-top">
+              <span class="breakdown-subitem-name">
+                <span class="breakdown-color-dot" style="background:${color}"></span>
+                ${escapeHtml(u.user)}
+              </span>
+              <span class="breakdown-subitem-val">${formatBytes(u.total)} <span class="breakdown-subitem-pct">${uPct}%</span></span>
+            </div>
+            <div class="breakdown-bar-track">
+              <div class="breakdown-bar-fill" style="width: ${Math.min(100, Math.max(0.5, uPct))}%; background: ${color};"></div>
+            </div>
+          </div>
+        `;
+      });
+
+      let moreBtnHtml = '';
+      if (hasMore) {
+        const remaining = item.users.length - 4;
+        moreBtnHtml = `<button type="button" class="breakdown-expand-btn" data-card-id="${cardId}">${isExpanded ? t('breakdownCollapse') : t('breakdownMore', remaining)}</button>`;
+      }
+
+      card.innerHTML = `
+        <div class="breakdown-card-top">
+          <div class="breakdown-card-name">
+            <button type="button" class="breakdown-card-name-btn" data-filter-node="${escapeHtml(item.node)}" title="${t('clickToFilterNode', item.node)}">
+              ${serverIcon}
+              <span>${escapeHtml(item.node)}</span>
+            </button>
+          </div>
+          <div class="breakdown-card-stat">
+            <div class="breakdown-card-total">${formatBytes(item.total)}<span class="breakdown-card-share">(${nodeShare}%)</span></div>
+            <div class="breakdown-card-sub"><span>↑ ${formatBytes(item.uplink)}</span> · <span>↓ ${formatBytes(item.downlink)}</span></div>
+          </div>
+        </div>
+        <div class="breakdown-sublist">
+          ${usersHtml || `<div class="breakdown-empty-sub">${t('empty')}</div>`}
+        </div>
+        ${moreBtnHtml}
+      `;
+      gridEl.appendChild(card);
+    });
+
+  } else if (currentView === 'user') {
+    if (titleEl) titleEl.textContent = t('breakdownTitleUser');
+    if (subEl) subEl.textContent = t('breakdownSubUser');
+
+    // Aggregate by user
+    const userMap = new Map();
+    for (const r of byUserNode) {
+      const rowTotal = (r.uplink || 0) + (r.downlink || 0);
+      if (!userMap.has(r.user)) {
+        userMap.set(r.user, { user: r.user, total: 0, uplink: 0, downlink: 0, nodes: [] });
+      }
+      const item = userMap.get(r.user);
+      item.total += rowTotal;
+      item.uplink += (r.uplink || 0);
+      item.downlink += (r.downlink || 0);
+      item.nodes.push({
+        node: r.node,
+        total: rowTotal,
+        uplink: r.uplink || 0,
+        downlink: r.downlink || 0,
+      });
+    }
+
+    for (const u of byUser) {
+      if (!userMap.has(u.user)) {
+        userMap.set(u.user, {
+          user: u.user,
+          total: (u.uplink || 0) + (u.downlink || 0),
+          uplink: u.uplink || 0,
+          downlink: u.downlink || 0,
+          nodes: [],
+        });
+      }
+    }
+
+    const userList = [...userMap.values()].sort((a, b) => b.total - a.total);
+    if (badgeEl) badgeEl.textContent = t('userBadgeCount', userList.length);
+
+    if (userList.length === 0 || totalAll === 0) {
+      if (emptyEl) emptyEl.style.display = 'block';
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    const userIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="breakdown-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+
+    userList.forEach((item, userIdx) => {
+      item.nodes.sort((a, b) => b.total - a.total);
+      const cardId = `user:${item.user}`;
+      const isExpanded = expandedCards.has(cardId);
+      const visibleNodes = isExpanded ? item.nodes : item.nodes.slice(0, 4);
+      const hasMore = item.nodes.length > 4;
+
+      const userShare = totalAll > 0 ? ((item.total / totalAll) * 100).toFixed(1) : '0.0';
+
+      const card = document.createElement('div');
+      card.className = `breakdown-item-card${activeUser === item.user ? ' active-filter' : ''}`;
+
+      let nodesHtml = '';
+      visibleNodes.forEach((n, nIdx) => {
+        const nPct = item.total > 0 ? ((n.total / item.total) * 100).toFixed(1) : '0.0';
+        const color = getColor(nIdx);
+        const isActive = activeNode === n.node;
+        nodesHtml += `
+          <div class="breakdown-subitem${isActive ? ' active-filter' : ''}" data-filter-node="${escapeHtml(n.node)}" title="${t('clickToFilterNode', n.node)}">
+            <div class="breakdown-subitem-top">
+              <span class="breakdown-subitem-name">
+                <span class="breakdown-color-dot" style="background:${color}"></span>
+                ${escapeHtml(n.node)}
+              </span>
+              <span class="breakdown-subitem-val">${formatBytes(n.total)} <span class="breakdown-subitem-pct">${nPct}%</span></span>
+            </div>
+            <div class="breakdown-bar-track">
+              <div class="breakdown-bar-fill" style="width: ${Math.min(100, Math.max(0.5, nPct))}%; background: ${color};"></div>
+            </div>
+          </div>
+        `;
+      });
+
+      let moreBtnHtml = '';
+      if (hasMore) {
+        const remaining = item.nodes.length - 4;
+        moreBtnHtml = `<button type="button" class="breakdown-expand-btn" data-card-id="${cardId}">${isExpanded ? t('breakdownCollapse') : t('breakdownMore', remaining)}</button>`;
+      }
+
+      card.innerHTML = `
+        <div class="breakdown-card-top">
+          <div class="breakdown-card-name">
+            <button type="button" class="breakdown-card-name-btn" data-filter-user="${escapeHtml(item.user)}" title="${t('clickToFilterUser', item.user)}">
+              ${userIcon}
+              <span>${escapeHtml(item.user)}</span>
+            </button>
+          </div>
+          <div class="breakdown-card-stat">
+            <div class="breakdown-card-total">${formatBytes(item.total)}<span class="breakdown-card-share">(${userShare}%)</span></div>
+            <div class="breakdown-card-sub"><span>↑ ${formatBytes(item.uplink)}</span> · <span>↓ ${formatBytes(item.downlink)}</span></div>
+          </div>
+        </div>
+        <div class="breakdown-sublist">
+          ${nodesHtml || `<div class="breakdown-empty-sub">${t('empty')}</div>`}
+        </div>
+        ${moreBtnHtml}
+      `;
+      gridEl.appendChild(card);
+    });
+
+  } else {
+    // currentView === 'total'
+    if (titleEl) titleEl.textContent = t('breakdownTitleTotal');
+    if (subEl) subEl.textContent = t('breakdownSubTotal');
+    if (badgeEl) badgeEl.textContent = t('totalBadgeSummary', byNode.length, byUser.length);
+
+    if (totalAll === 0 || (byNode.length === 0 && byUser.length === 0)) {
+      if (emptyEl) emptyEl.style.display = 'block';
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    // Sorted node list
+    const sortedNodes = [...byNode]
+      .map(n => ({ name: n.node, uplink: n.uplink, downlink: n.downlink, total: (n.uplink || 0) + (n.downlink || 0) }))
+      .sort((a, b) => b.total - a.total);
+
+    // Sorted user list
+    const sortedUsers = [...byUser]
+      .map(u => ({ name: u.user, uplink: u.uplink, downlink: u.downlink, total: (u.uplink || 0) + (u.downlink || 0) }))
+      .sort((a, b) => b.total - a.total);
+
+    // Node ranking card
+    const nodeCard = document.createElement('div');
+    nodeCard.className = 'breakdown-item-card';
+    const isExpandedNodes = expandedCards.has('total:nodes');
+    const visibleNodes = isExpandedNodes ? sortedNodes : sortedNodes.slice(0, 5);
+    const hasMoreNodes = sortedNodes.length > 5;
+
+    let nodesListHtml = '';
+    visibleNodes.forEach((n, idx) => {
+      const pct = totalAll > 0 ? ((n.total / totalAll) * 100).toFixed(1) : '0.0';
+      const color = getColor(idx);
+      const isActive = activeNode === n.name;
+      nodesListHtml += `
+        <div class="breakdown-subitem${isActive ? ' active-filter' : ''}" data-filter-node="${escapeHtml(n.name)}" title="${t('clickToFilterNode', n.name)}">
+          <div class="breakdown-subitem-top">
+            <span class="breakdown-subitem-name">
+              <span class="breakdown-color-dot" style="background:${color}"></span>
+              ${escapeHtml(n.name)}
+            </span>
+            <span class="breakdown-subitem-val">${formatBytes(n.total)} <span class="breakdown-subitem-pct">${pct}%</span></span>
+          </div>
+          <div class="breakdown-bar-track">
+            <div class="breakdown-bar-fill" style="width: ${Math.min(100, Math.max(0.5, pct))}%; background: ${color};"></div>
+          </div>
+        </div>
+      `;
+    });
+
+    const moreNodesBtn = hasMoreNodes ? `<button type="button" class="breakdown-expand-btn" data-card-id="total:nodes">${isExpandedNodes ? t('breakdownCollapse') : t('breakdownMore', sortedNodes.length - 5)}</button>` : '';
+
+    nodeCard.innerHTML = `
+      <div class="breakdown-card-top">
+        <div class="breakdown-card-name">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="breakdown-icon"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          <span>${t('breakdownNodeRank')}</span>
+        </div>
+        <div class="breakdown-card-stat">
+          <span class="breakdown-card-share">${t('nodeBadgeCount', sortedNodes.length)}</span>
+        </div>
+      </div>
+      <div class="breakdown-sublist">${nodesListHtml}</div>
+      ${moreNodesBtn}
+    `;
+    gridEl.appendChild(nodeCard);
+
+    // User ranking card
+    const userCard = document.createElement('div');
+    userCard.className = 'breakdown-item-card';
+    const isExpandedUsers = expandedCards.has('total:users');
+    const visibleUsers = isExpandedUsers ? sortedUsers : sortedUsers.slice(0, 5);
+    const hasMoreUsers = sortedUsers.length > 5;
+
+    let usersListHtml = '';
+    visibleUsers.forEach((u, idx) => {
+      const pct = totalAll > 0 ? ((u.total / totalAll) * 100).toFixed(1) : '0.0';
+      const color = getColor(idx);
+      const isActive = activeUser === u.name;
+      usersListHtml += `
+        <div class="breakdown-subitem${isActive ? ' active-filter' : ''}" data-filter-user="${escapeHtml(u.name)}" title="${t('clickToFilterUser', u.name)}">
+          <div class="breakdown-subitem-top">
+            <span class="breakdown-subitem-name">
+              <span class="breakdown-color-dot" style="background:${color}"></span>
+              ${escapeHtml(u.name)}
+            </span>
+            <span class="breakdown-subitem-val">${formatBytes(u.total)} <span class="breakdown-subitem-pct">${pct}%</span></span>
+          </div>
+          <div class="breakdown-bar-track">
+            <div class="breakdown-bar-fill" style="width: ${Math.min(100, Math.max(0.5, pct))}%; background: ${color};"></div>
+          </div>
+        </div>
+      `;
+    });
+
+    const moreUsersBtn = hasMoreUsers ? `<button type="button" class="breakdown-expand-btn" data-card-id="total:users">${isExpandedUsers ? t('breakdownCollapse') : t('breakdownMore', sortedUsers.length - 5)}</button>` : '';
+
+    userCard.innerHTML = `
+      <div class="breakdown-card-top">
+        <div class="breakdown-card-name">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="breakdown-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <span>${t('breakdownUserRank')}</span>
+        </div>
+        <div class="breakdown-card-stat">
+          <span class="breakdown-card-share">${t('userBadgeCount', sortedUsers.length)}</span>
+        </div>
+      </div>
+      <div class="breakdown-sublist">${usersListHtml}</div>
+      ${moreUsersBtn}
+    `;
+    gridEl.appendChild(userCard);
+  }
+}
+
+// ── Breakdown Click Delegation ──────────────────────────────────
+document.getElementById('breakdownGrid')?.addEventListener('click', e => {
+  // 1. Expand / Collapse
+  const expandBtn = e.target.closest('.breakdown-expand-btn');
+  if (expandBtn) {
+    const cardId = expandBtn.dataset.cardId;
+    if (cardId) {
+      if (expandedCards.has(cardId)) {
+        expandedCards.delete(cardId);
+      } else {
+        expandedCards.add(cardId);
+      }
+      if (cachedStatsData) renderBreakdownCards(cachedStatsData);
+    }
+    return;
+  }
+
+  // 2. Filter by user (toggle if already active)
+  const userEl = e.target.closest('[data-filter-user]');
+  if (userEl) {
+    const userVal = userEl.dataset.filterUser;
+    if (userVal) {
+      userFilter.value = (userFilter.value === userVal) ? '' : userVal;
+      recordsPage = 1;
+      refresh();
+      document.getElementById('userFilter')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    return;
+  }
+
+  // 3. Filter by node (toggle if already active)
+  const nodeEl = e.target.closest('[data-filter-node]');
+  if (nodeEl) {
+    const nodeVal = nodeEl.dataset.filterNode;
+    if (nodeVal) {
+      nodeFilter.value = (nodeFilter.value === nodeVal) ? '' : nodeVal;
+      recordsPage = 1;
+      refresh();
+      document.getElementById('nodeFilter')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    return;
+  }
+});
+
 // ── View switch handler ──────────────────────────────────────────
 document.getElementById('viewSwitch')?.addEventListener('click', e => {
   const btn = e.target.closest('.view-btn');
@@ -582,7 +1032,10 @@ document.getElementById('viewSwitch')?.addEventListener('click', e => {
   if (!view || view === currentView) return;
   currentView = view;
   document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b === btn));
-  if (cachedStatsData) renderChart(cachedStatsData);
+  if (cachedStatsData) {
+    renderChart(cachedStatsData);
+    renderBreakdownCards(cachedStatsData);
+  }
 });
 
 // ── Pagination helpers ───────────────────────────────────────────
@@ -776,6 +1229,7 @@ async function refresh() {
   }
 
   renderChart(data);
+  renderBreakdownCards(data);
   renderKpis(data.summary);
   if (showDetails) {
     await loadRecords(1);

@@ -6,10 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 📊 Dashboard & Analytics
+- **Dual-Perspective Traffic Breakdown Matrix (By User / By Node)**: Integrated an interactive breakdown matrix directly inside the main chart card with seamless theme matching and clean divider styling.
+  - In **By Node** mode, presents "Node Breakdown" displaying users per node with traffic volumes, proportional share, and colored progress bars.
+  - In **By User** mode, presents "Node Breakdown" displaying nodes accessed per user.
+  - In **Total** mode, presents side-by-side Top Nodes and Top Users traffic rankings.
+  - **Interactive Filter Linkage**: Clicking on any node or user item in the breakdown cards instantly applies or clears that filter on the dashboard, with auto-collapsing for clean card layouts.
+
 ### 🏗️ Architecture & Refactoring
-- **Centralized Utility Module (`utils.ts`)**: Extracted and consolidated scattered helper functions across the server and agent into dedicated `utils.ts` modules. Unified parameter list parsing (`parseList`), safe ISO date parsing (`parseDateIso`), traffic and byte unit formatting (`toMB`, `formatBytes`), cryptographically secure token generation (`generateToken`), and dynamic package version retrieval (`getPackageVersion`).
-- **Standardized Type Definitions & API Contracts (`types.ts`)**: Consolidated dispersed models (`AuthenticatedRequest`, `AggResult`) and eliminated anonymous inline type castings across database queries. Introduced formal API response contracts (`StatsResponse`, `StatsMetaResponse`, `PaginatedRecordsResponse`, `TrafficSummary`, `UserTrafficStats`, `NodeTrafficStats`, `TimeSeries*`) for full type-safety and maintainability.
-- **Timezone-Aware Local Logging System**: Replaced ISO 8601 logging strings with standardized local timezone timestamps (`YYYY-MM-DD HH:mm:ss`) across all server and agent components, strictly respecting the configured `TZ` environment variable (e.g. `TZ=Asia/Shanghai`) with graceful fallback. Added global unhandled rejection and uncaught exception logging handlers for both server and agent.
+- Consolidated scattered helper functions into centralized `utils.ts` modules for server and agent.
+- Standardized database models and introduced formal TypeScript API contracts in `types.ts`.
+- Switched to timezone-aware local timestamps across server and agent logging with global unhandled error handlers.
 
 ---
 
