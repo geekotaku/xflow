@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-09-14
+
 ### 🚀 Standalone Agent & Deployment
 - **Single Executable Application (SEA)**: Added standalone native binary builds for `xflow-agent` using Node.js SEA and esbuild, packaging all dependencies and Protobuf schemas into self-contained executables with zero runtime dependencies.
 - **Dual-Architecture Release Binaries**: Enhanced release workflow to produce standalone `xflow-agent-linux-amd64` and `xflow-agent-linux-arm64` binaries, matching multi-architecture container releases.
